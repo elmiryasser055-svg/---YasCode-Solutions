@@ -1,0 +1,57 @@
+# .github/workflows/build-release.yml
+#
+# CI/CD بسيط ومناسب لحجم هذا المشروع: عند دفع tag بصيغة vX.Y.Z، يُبنى
+# التطبيق تلقائيًا على بيئة Windows فعلية (ضروري لأن better-sqlite3 و
+# node-thermal-printer يحتاجان native rebuild خاص بـ Windows)، ثم يُرفع
+# ملف الـ installer الناتج كـ GitHub Release تلقائيًا — دون أي خادم CI مُدار يدويًا.
+
+name: Build & Release Windows Installer
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Check for known vulnerabilities
+        run: npm run audit:check
+        continue-on-error: true # تنبيه وليس إيقاف كامل — يُراجَع يدويًا قبل كل إصدار
+
+      - name: Generate DB migrations (تأكيد أن السكيمة والملفات متزامنة)
+        run: npm run db:generate
+
+      - name: Build renderer + electron
+        run: npm run predist
+
+      - name: Build Windows installer
+        run: npm run dist:win
+        env:
+          # في حال أُضيف code signing مستقبلاً، تُقرأ الشهادة من GitHub Secrets هنا
+          # ولا تُكتب أبدًا في الكود مباشرة (نفس مبدأ Secrets Management من back-end.md)
+          CSC_LINK: ${{ secrets.WINDOWS_CERT_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+
+      - name: Upload installer to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-installer/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

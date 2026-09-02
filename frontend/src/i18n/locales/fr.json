@@ -1,0 +1,37 @@
+{
+  "pos": {
+    "title": "Point de vente",
+    "searchPlaceholder": "Rechercher par nom ou scanner le code-barres...",
+    "cart": "Panier",
+    "subtotal": "Sous-total",
+    "discount": "Remise",
+    "total": "Total",
+    "completeSale": "Valider la vente",
+    "cancelSale": "Annuler la vente",
+    "printTicket": "Imprimer le ticket",
+    "reprintTicket": "Réimprimer la facture"
+  },
+  "inventory": {
+    "title": "Stock",
+    "lowStock": "Stock faible",
+    "expiringSoon": "Bientôt périmé",
+    "expired": "Périmé",
+    "currentQuantity": "Quantité actuelle"
+  },
+  "cashRegister": {
+    "title": "Caisse",
+    "openSession": "Ouvrir une session",
+    "closeSession": "Clôturer la session",
+    "openingAmount": "Fonds de caisse initial",
+    "expectedAmount": "Montant attendu",
+    "actualAmount": "Montant réel",
+    "difference": "Écart"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer"
+  }
+}

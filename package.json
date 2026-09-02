@@ -1,0 +1,94 @@
+{
+  "name": "yascode-supperette",
+  "version": "1.0.0",
+  "description": "نظام تسيير محلات المواد الغذائية — YasCode Solutions",
+  "main": "dist-electron/frontend/electron/main.js",
+  "scripts": {
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "rebuild:for-node": "npm rebuild better-sqlite3",
+    "rebuild:for-electron": "electron-rebuild -f -w better-sqlite3",
+    "predev": "npm run rebuild:for-electron",
+    "dev:renderer": "vite",
+    "dev:electron": "tsc -p tsconfig.electron.json --watch",
+    "dev": "concurrently -k -n RENDERER,ELECTRON,APP \"npm:dev:renderer\" \"npm:dev:electron\" \"npm run dev:launch\"",
+    "dev:launch": "wait-on tcp:5173 dist-electron/frontend/electron/main.js && cross-env NODE_ENV=development electron .",
+    "build:renderer": "vite build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "predist": "npm run build:renderer && npm run build:electron",
+    "dist:win": "electron-builder --win --x64",
+    "db:generate": "drizzle-kit generate",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "audit:check": "npm audit --audit-level=high",
+    "seed:owner": "npm run rebuild:for-node && tsx scripts/seed-owner.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "drizzle-orm": "^0.33.0",
+    "bcrypt": "^5.1.1",
+    "zod": "^3.23.8",
+    "node-thermal-printer": "^4.4.4",
+    "bwip-js": "^4.5.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.5",
+    "react-i18next": "^15.0.1",
+    "i18next": "^23.14.0",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^24.13.3",
+    "@electron/rebuild": "^3.6.1",
+    "drizzle-kit": "^0.24.2",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2",
+    "@vitejs/plugin-react": "^4.3.1",
+    "tailwindcss": "^3.4.10",
+    "postcss": "^8.4.41",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^8.2.2",
+    "wait-on": "^7.2.0",
+    "cross-env": "^7.0.3",
+    "tsx": "^4.19.0",
+    "vitest": "^2.0.5",
+    "jsdom": "^25.0.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@playwright/test": "^1.47.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/node": "^20.14.15",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/bcrypt": "^5.0.2"
+  },
+  "build": {
+    "appId": "com.yascode.supperette",
+    "productName": "YasCode Supérette",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**",
+      "drizzle/migrations/**"
+    ],
+    "files": [
+      "dist-electron/**",
+      "dist/**"
+    ],
+    "extraResources": [
+      { "from": "drizzle/migrations", "to": "drizzle/migrations" }
+    ],
+    "directories": {
+      "output": "dist-installer"
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

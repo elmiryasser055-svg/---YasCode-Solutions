@@ -1,0 +1,37 @@
+{
+  "pos": {
+    "title": "نقطة البيع",
+    "searchPlaceholder": "ابحث بالاسم أو امسح الباركود...",
+    "cart": "السلة",
+    "subtotal": "المجموع الفرعي",
+    "discount": "الخصم",
+    "total": "الإجمالي",
+    "completeSale": "إتمام البيع",
+    "cancelSale": "إلغاء البيع",
+    "printTicket": "طباعة التذكرة",
+    "reprintTicket": "إعادة طباعة الفاتورة"
+  },
+  "inventory": {
+    "title": "المخزون",
+    "lowStock": "كمية منخفضة",
+    "expiringSoon": "قريب من الانتهاء",
+    "expired": "منتهي الصلاحية",
+    "currentQuantity": "الكمية الحالية"
+  },
+  "cashRegister": {
+    "title": "الصندوق",
+    "openSession": "فتح جلسة",
+    "closeSession": "إغلاق جلسة",
+    "openingAmount": "المبلغ الابتدائي",
+    "expectedAmount": "المبلغ المتوقع",
+    "actualAmount": "المبلغ الفعلي",
+    "difference": "الفرق"
+  },
+  "common": {
+    "loading": "جاري التحميل...",
+    "error": "حدث خطأ",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد"
+  }
+}
