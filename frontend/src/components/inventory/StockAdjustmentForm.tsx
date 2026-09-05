@@ -1,66 +1,190 @@
 // src/components/inventory/StockAdjustmentForm.tsx
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
 import { api } from "../../lib/ipcClient";
 import { useIpcMutation } from "../../hooks/useIpcMutation";
 
 interface Props {
   productId: number;
   productName: string;
+  currentQuantity: number; // لإظهار الكمية الحالية وتوجيه المستخدم
   onDone: () => void;
+  onClose: () => void;
 }
 
-/** نموذج بسيط لتعديل الكمية يدويًا (stock in/out) — owner فقط (مفروض في الباك-إند أيضًا) */
-export function StockAdjustmentForm({ productId, productName, onDone }: Props) {
-  const { t } = useTranslation();
-  const [quantityChange, setQuantityChange] = useState(0);
-  const [reason, setReason] = useState("");
+const QUICK_AMOUNTS = [1, 5, 10, 50];
 
-  const adjustStock = useIpcMutation(api().inventory.adjustStock, {
+export function StockAdjustmentForm({ productId, productName, currentQuantity, onDone, onClose }: Props) {
+  const { t } = useTranslation();
+  
+  // mode: "difference" (زيادة/نقصان) أو "exact" (تحديد الكمية الفعلية للجرد)
+  const [mode, setMode] = useState<"difference" | "exact">("difference");
+  const [direction, setDirection] = useState<"in" | "out">("in"); // للوضع difference فقط
+  const [amount, setAmount] = useState<number>(0);
+  const [reason, setReason] = useState("لايوجد سبب محدد");
+
+  // نستخدم mutation واحد، ونمرر له الدالة المناسبة بناءً على mode
+  const mutationFn = mode === "difference" ? api().inventory.adjustStock : api().inventory.correctInventory;
+  
+  const adjustStock = useIpcMutation(mutationFn as any, {
     onSuccess: onDone,
   });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await adjustStock.mutate({ productId, quantityChange, reason });
+    
+    let payload: any;
+    if (mode === "difference") {
+      const finalQuantity = direction === "in" ? Math.abs(amount) : -Math.abs(amount);
+      payload = { productId, quantityChange: finalQuantity, reason };
+    } else {
+      payload = { productId, newQuantity: Math.abs(amount), reason };
+    }
+
+    await adjustStock.mutate(payload);
   }
 
+  const handleQuickAmount = (val: number) => {
+    if (mode === "exact") {
+      setAmount(val);
+    } else {
+      setAmount((prev) => prev + val);
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border p-4">
-      <h3 className="font-semibold">{productName}</h3>
+    <div className="yc-card h-full flex flex-col">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h3 className="font-bold text-lg text-[var(--text-primary)]">{productName}</h3>
+          <p className="text-sm text-[var(--text-muted)]">
+            الكمية الحالية المسجلة: <span className="font-bold text-[var(--text-primary)]">{currentQuantity}</span>
+          </p>
+        </div>
+        <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-1">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
 
-      <label className="block text-sm">
-        الكمية (موجب = إضافة، سالب = إخراج)
-        <input
-          type="number"
-          className="mt-1 w-full rounded border p-2"
-          value={quantityChange}
-          onChange={(e) => setQuantityChange(Number(e.target.value))}
-          data-barcode-ignore="true"
-        />
-      </label>
+      {/* Toggle Mode */}
+      <div className="grid grid-cols-2 gap-2 bg-[var(--color-gray-100)] p-1 rounded-lg mb-4">
+        <button
+          type="button"
+          onClick={() => setMode("difference")}
+          className={`py-2 rounded-md text-xs font-medium transition-all ${mode === "difference" ? "bg-white shadow-sm text-[var(--color-primary-600)]" : "text-[var(--text-secondary)]"}`}
+        >
+          تعديل بالفرق (إدخال/إخراج)
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("exact")}
+          className={`py-2 rounded-md text-xs font-medium transition-all ${mode === "exact" ? "bg-white shadow-sm text-[var(--color-primary-600)]" : "text-[var(--text-secondary)]"}`}
+        >
+          تحديد الكمية الفعلية (جرد)
+        </button>
+      </div>
 
-      <label className="block text-sm">
-        السبب
-        <input
-          type="text"
-          className="mt-1 w-full rounded border p-2"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="مثال: تلف، هدية، تصحيح جرد..."
-          data-barcode-ignore="true"
-        />
-      </label>
+      <form onSubmit={handleSubmit} className="space-y-4 flex-1 flex flex-col">
+        
+        {/* Direction Toggle (Only for difference mode) */}
+        {mode === "difference" && (
+          <div className="grid grid-cols-2 gap-2 bg-[var(--color-gray-100)] p-1 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setDirection("in")}
+              className={`py-2 rounded-md text-sm font-medium transition-all ${direction === "in" ? "bg-white shadow-sm text-[var(--color-success-600)]" : "text-[var(--text-secondary)]"}`}
+            >
+              إدخال (زيادة)
+            </button>
+            <button
+              type="button"
+              onClick={() => setDirection("out")}
+              className={`py-2 rounded-md text-sm font-medium transition-all ${direction === "out" ? "bg-white shadow-sm text-[var(--color-danger-600)]" : "text-[var(--text-secondary)]"}`}
+            >
+              إخراج (نقص)
+            </button>
+          </div>
+        )}
 
-      {adjustStock.error && <p className="text-sm text-red-600">{adjustStock.error}</p>}
+        {/* Amount Input & Quick Buttons */}
+        <div>
+          <label className="block text-sm">
+            <span className="text-[var(--text-secondary)] mb-1 block">
+              {mode === "exact" ? "الكمية الفعلية المعاينة" : "الكمية المضافة/المخرجة"}
+            </span>
+            <input
+              type="number"
+              min="0"
+              className="yc-input text-lg font-bold"
+              value={amount === 0 ? "" : amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              placeholder="0"
+              data-barcode-ignore="true"
+              required
+            />
+          </label>
+          
+          <div className="grid grid-cols-4 gap-2 mt-2">
+            {QUICK_AMOUNTS.map((amt) => (
+              <button
+                key={amt}
+                type="button"
+                onClick={() => handleQuickAmount(amt)}
+                className="yc-btn-secondary !py-1.5 !px-0 text-sm"
+              >
+                {mode === "exact" ? amt : `+${amt}`}
+              </button>
+            ))}
+          </div>
+        </div>
 
-      <button
-        type="submit"
-        disabled={adjustStock.isLoading || quantityChange === 0 || reason.length < 2}
-        className="w-full rounded-md bg-blue-600 py-2 text-white disabled:opacity-50"
-      >
-        {adjustStock.isLoading ? t("common.loading") : t("common.confirm")}
-      </button>
-    </form>
+        <label className="block text-sm">
+          <span className="text-[var(--text-secondary)] mb-1 block">السبب</span>
+          <textarea
+            className="yc-input resize-none"
+            rows={3}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="مثال: تلف، هدية، تصحيح جرد..."
+            data-barcode-ignore="true"
+            required
+          />
+        </label>
+
+        {adjustStock.error && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            className="text-sm text-[var(--color-danger-600)] bg-[var(--color-danger-50)] p-2 rounded-md animate-shake"
+          >
+            {adjustStock.error}
+          </motion.div>
+        )}
+
+        <div className="mt-auto pt-4">
+          <button
+            type="submit"
+            disabled={adjustStock.isLoading || amount <= 0 || reason.length < 2}
+            className={`w-full py-3 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+              mode === "exact" 
+                ? "bg-gradient-to-r from-[var(--color-primary-500)] to-[var(--color-primary-600)] hover:shadow-lg" 
+                : direction === "in" 
+                  ? "bg-gradient-to-r from-[var(--color-success-500)] to-[var(--color-success-600)] hover:shadow-lg" 
+                  : "bg-gradient-to-r from-[var(--color-danger-500)] to-[var(--color-danger-600)] hover:shadow-lg"
+            }`}
+          >
+            {adjustStock.isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                جاري التنفيذ...
+              </span>
+            ) : (
+              mode === "exact" ? "حفظ نتيجة الجرد" : direction === "in" ? "تأكيد الإدخال" : "تأكيد الإخراج"
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

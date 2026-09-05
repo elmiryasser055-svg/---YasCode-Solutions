@@ -1,14 +1,11 @@
 // src/components/categories/CategoriesScreen.tsx
-//
-// ⭐ يسدّ فجوة: كان بالإمكان فقط إنشاء فئة من داخل ProductForm — لا تعديل
-// ولا حذف من أي مكان في الواجهة، رغم أن الباك-إند (categories module) يدعم
-// العمليتين بالكامل منذ إضافته.
-
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../lib/ipcClient";
 import { useIpcQuery } from "../../hooks/useIpcQuery";
 import { useIpcMutation } from "../../hooks/useIpcMutation";
 import { confirm } from "../../store/confirmStore";
+import { toast } from "../../lib/toast"; // استيراد الـ toast الخاص بك
 
 export function CategoriesScreen() {
   const categories = useIpcQuery(() => api().categories.list());
@@ -20,18 +17,26 @@ export function CategoriesScreen() {
     onSuccess: () => {
       categories.refetch();
       setNewName("");
+      toast.success("تمت إضافة الفئة بنجاح");
     },
+    onError: (err) => toast.error(err),
   });
 
   const updateCategory = useIpcMutation(api().categories.update, {
     onSuccess: () => {
       categories.refetch();
       setEditingId(null);
+      toast.success("تم تحديث الفئة بنجاح");
     },
+    onError: (err) => toast.error(err),
   });
 
   const deleteCategory = useIpcMutation(api().categories.delete, {
-    onSuccess: () => categories.refetch(),
+    onSuccess: () => {
+      categories.refetch();
+      toast.success("تم حذف الفئة. المنتجات المرتبطة أصبحت بلا فئة.");
+    },
+    onError: (err) => toast.error(err),
   });
 
   async function handleDelete(id: number, name: string) {
@@ -42,77 +47,124 @@ export function CategoriesScreen() {
   }
 
   return (
-    <div className="mx-auto mt-6 max-w-md space-y-4 p-4">
-      <h1 className="text-xl font-bold">إدارة الفئات</h1>
+    <div className="mx-auto flex h-full max-w-2xl flex-col p-6">
+      <motion.h1 
+        initial={{ opacity: 0, y: -10 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        className="mb-6 text-2xl font-bold text-[var(--text-primary)]"
+      >
+        إدارة الفئات
+      </motion.h1>
 
-      <div className="flex gap-2">
-        <input
-          className="flex-1 rounded border p-2 text-sm"
-          placeholder="اسم فئة جديدة"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          data-barcode-ignore="true"
-        />
-        <button
-          onClick={() => createCategory.mutate({ name: newName })}
-          disabled={createCategory.isLoading || newName.length < 2}
-          className="rounded-md bg-blue-600 px-4 text-sm text-white disabled:opacity-50"
-        >
-          + إضافة
-        </button>
-      </div>
-      {createCategory.error && <p className="text-sm text-red-600">{createCategory.error}</p>}
-
-      {categories.isLoading && <p className="text-sm text-gray-400">جاري التحميل...</p>}
-      {categories.error && <p className="text-sm text-red-600">{categories.error}</p>}
-
-      <ul className="divide-y rounded-lg border">
-        {(categories.data ?? []).map((c) => (
-          <li key={c.id} className="flex items-center justify-between p-3">
-            {editingId === c.id ? (
-              <div className="flex flex-1 gap-2">
-                <input
-                  className="flex-1 rounded border p-1 text-sm"
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  data-barcode-ignore="true"
-                />
-                <button
-                  onClick={() => updateCategory.mutate({ id: c.id, name: editingName })}
-                  disabled={updateCategory.isLoading || editingName.length < 2}
-                  className="text-sm text-blue-600"
-                >
-                  حفظ
-                </button>
-                <button onClick={() => setEditingId(null)} className="text-sm text-gray-500">
-                  إلغاء
-                </button>
-              </div>
+      {/* Add New Category Form */}
+      <div className="yc-card mb-6">
+        <h3 className="mb-3 text-sm font-medium text-[var(--text-secondary)]">إضافة فئة جديدة</h3>
+        <div className="flex gap-2">
+          <input
+            className="yc-input flex-1"
+            placeholder="مثال: مشروبات، ألبان، تنضيد..."
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            data-barcode-ignore="true"
+          />
+          <button
+            onClick={() => createCategory.mutate({ name: newName })}
+            disabled={createCategory.isLoading || newName.length < 2}
+            className="yc-btn-primary whitespace-nowrap"
+          >
+            {createCategory.isLoading ? (
+              <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
             ) : (
-              <>
-                <span className="text-sm">{c.name}</span>
-                <div className="flex gap-3 text-sm">
-                  <button
-                    onClick={() => {
-                      setEditingId(c.id);
-                      setEditingName(c.name);
-                    }}
-                    className="text-blue-600 underline"
-                  >
-                    تعديل
-                  </button>
-                  <button onClick={() => handleDelete(c.id, c.name)} className="text-red-600 underline">
-                    حذف
-                  </button>
-                </div>
-              </>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
             )}
-          </li>
-        ))}
-        {!categories.isLoading && (categories.data ?? []).length === 0 && (
-          <li className="p-4 text-center text-sm text-gray-400">لا توجد فئات بعد</li>
+            <span>إضافة</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Categories List */}
+      <div className="yc-card flex-1 overflow-hidden p-0">
+        {categories.isLoading ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="animate-spin-slow h-8 w-8 rounded-full border-4 border-[var(--color-primary-200)] border-t-[var(--color-primary-600)]"></div>
+          </div>
+        ) : categories.error ? (
+          <div className="p-4 text-center text-[var(--color-danger-600)]">{categories.error}</div>
+        ) : (
+          <div className="h-full overflow-auto">
+            <AnimatePresence mode="popLayout">
+              {(categories.data ?? []).map((c, index) => (
+                <motion.div
+                  key={c.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2, delay: index * 0.03 }}
+                  className={`flex items-center justify-between p-4 border-b border-[var(--border-light)] last:border-0 ${
+                    editingId === c.id ? "bg-[var(--color-primary-50)]" : "hover:bg-[var(--bg-hover)] transition-colors"
+                  }`}
+                >
+                  {editingId === c.id ? (
+                    <div className="flex flex-1 items-center gap-2">
+                      <input
+                        className="yc-input flex-1 !py-1.5"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        data-barcode-ignore="true"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => updateCategory.mutate({ id: c.id, name: editingName })}
+                        disabled={updateCategory.isLoading || editingName.length < 2}
+                        className="yc-btn-success !py-1.5 !px-3 text-xs"
+                      >
+                        حفظ
+                      </button>
+                      <button 
+                        onClick={() => setEditingId(null)} 
+                        className="yc-btn-secondary !py-1.5 !px-3 text-xs"
+                      >
+                        إلغاء
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="font-medium text-[var(--text-primary)]">{c.name}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingId(c.id);
+                            setEditingName(c.name);
+                          }}
+                          className="yc-btn-secondary !py-1.5 !px-3 text-xs"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                          تعديل
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(c.id, c.name)} 
+                          className="text-[var(--color-danger-600)] hover:bg-[var(--color-danger-50)] p-1.5 rounded-md transition-colors"
+                          title="حذف"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {!categories.isLoading && (categories.data ?? []).length === 0 && (
+              <div className="p-8 text-center text-[var(--text-muted)] flex flex-col items-center gap-2 animate-fade-in">
+                <svg className="w-12 h-12 text-[var(--color-gray-300)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                لا توجد فئات بعد. ابدأ بإضافة فئة جديدة أعلاه.
+              </div>
+            )}
+          </div>
         )}
-      </ul>
+      </div>
     </div>
   );
 }

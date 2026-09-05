@@ -1,13 +1,9 @@
 // src/components/pos/EditSaleForm.tsx
-//
-// ⭐ يسدّ فجوة: sales.editSale جاهز بالكامل في الباك-إند (المرحلة 3، الجولة
-// الثانية) بلا أي واجهة تستدعيه. لا يحتاج هذا النموذج معرّفات sale_item
-// (فقط productId + quantity)، لذا يعمل مباشرة على بيانات lastSale المتوفرة
-// أصلاً في ذاكرة SaleScreen دون أي استدعاء إضافي.
-
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../lib/ipcClient";
 import { useIpcMutation } from "../../hooks/useIpcMutation";
+import { Plus, Trash2, Loader2, TriangleAlert, CircleAlert, PackageOpen } from "lucide-react";
 
 export interface EditableSaleItem {
   productId: number;
@@ -16,21 +12,50 @@ export interface EditableSaleItem {
   unitPrice: number;
 }
 
+// ⭐ ما يُرسَل إلى onDone بعد نجاح التعديل، حتى يقدر الأب (SaleScreen) يحدّث
+// الفاتورة في مكانها داخل recentSales بدل حذفها.
+export interface UpdatedSaleResult {
+  id: number;
+  saleNumber: string;
+  discount: number;
+  items: EditableSaleItem[];
+  total: number;
+}
+
 interface Props {
   saleId: number;
+  saleNumber: string;
   initialItems: EditableSaleItem[];
   initialDiscount: number;
-  onDone: () => void;
+  onDone: (updatedSale: UpdatedSaleResult) => void;
   onCancel: () => void;
 }
 
-export function EditSaleForm({ saleId, initialItems, initialDiscount, onDone, onCancel }: Props) {
+// هذا المكوّن يُعرض داخل <Modal> (انظر SaleScreen.tsx)، لذلك لا يحرّك ارتفاعه
+// الخاص ولا يعرض عنوانًا مكررًا — النافذة المنبثقة تتكفّل بالعنوان والانيميشن.
+export function EditSaleForm({ saleId, saleNumber, initialItems, initialDiscount, onDone, onCancel }: Props) {
   const [items, setItems] = useState<EditableSaleItem[]>(initialItems);
   const [discount, setDiscount] = useState(initialDiscount);
-  const [reason, setReason] = useState("");
+  const [reason, setReason] = useState("لا يوجد سبب");
   const [addQuery, setAddQuery] = useState("");
 
-  const editSale = useIpcMutation(api().sales.edit, { onSuccess: onDone });
+  const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+  const total = subtotal - discount;
+  const invalidDiscount = discount > subtotal;
+
+  // ⭐ نبني القيم المحدَّثة من الحالة المحلية (items/discount/total) التي نجح
+  // إرسالها فعليًا، بدل الاعتماد على شكل استجابة الخادم غير المضمون — ونمرّرها
+  // إلى onDone حتى يحدّث الأب الفاتورة في مكانها بدل حذفها من القائمة.
+  const editSale = useIpcMutation(api().sales.edit, {
+    onSuccess: () =>
+      onDone({
+        id: saleId,
+        saleNumber,
+        discount,
+        items,
+        total,
+      }),
+  });
 
   function updateQuantity(productId: number, quantity: number) {
     if (quantity <= 0) {
@@ -38,6 +63,10 @@ export function EditSaleForm({ saleId, initialItems, initialDiscount, onDone, on
       return;
     }
     setItems((prev) => prev.map((i) => (i.productId === productId ? { ...i, quantity } : i)));
+  }
+
+  function removeItem(productId: number) {
+    setItems((prev) => prev.filter((i) => i.productId !== productId));
   }
 
   async function handleAddProduct() {
@@ -58,86 +87,163 @@ export function EditSaleForm({ saleId, initialItems, initialDiscount, onDone, on
     setAddQuery("");
   }
 
-  const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-  const total = subtotal - discount;
-
   async function handleSubmit() {
-    if (items.length === 0 || reason.length < 3) return;
+    if (items.length === 0 || invalidDiscount) return;
+    const finalReason = reason.trim() === "" ? "لا يوجد سبب" : reason.trim();
     await editSale.mutate({
       saleId,
       items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
       discount,
-      reason,
+      reason: finalReason,
     });
   }
 
   return (
-    <div className="mt-3 space-y-3 border-t pt-3">
-      <h4 className="text-sm font-semibold">تعديل الفاتورة</h4>
-
+    <div className="space-y-3">
       <div className="flex gap-2">
         <input
-          className="flex-1 rounded border p-2 text-sm"
+          className="yc-input flex-1"
           placeholder="أضف منتجًا (اسم أو باركود)..."
           value={addQuery}
           onChange={(e) => setAddQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAddProduct()}
           data-barcode-ignore="true"
         />
-        <button onClick={handleAddProduct} className="rounded border px-3 text-sm">
+        <button onClick={handleAddProduct} className="yc-btn-secondary !px-3 !py-2 !text-sm">
+          <Plus className="h-4 w-4" strokeWidth={2} />
           إضافة
         </button>
       </div>
 
-      <ul className="space-y-1">
-        {items.map((item) => (
-          <li key={item.productId} className="flex items-center justify-between text-sm">
-            <span>{item.name}</span>
-            <input
-              type="number"
-              className="w-16 rounded border p-1 text-center"
-              value={item.quantity}
-              onChange={(e) => updateQuantity(item.productId, Number(e.target.value))}
-              data-barcode-ignore="true"
-            />
-            <span>{(item.unitPrice * item.quantity).toFixed(2)}</span>
-          </li>
-        ))}
-      </ul>
+      {items.length === 0 ? (
+        <div
+          className="flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-md)] py-6 text-center"
+          style={{ background: "var(--bg-hover)", color: "var(--text-muted)" }}
+        >
+          <PackageOpen className="h-7 w-7" strokeWidth={1.25} />
+          <p className="text-sm">لا توجد منتجات في الفاتورة</p>
+        </div>
+      ) : (
+        <ul className="space-y-1.5">
+          <AnimatePresence initial={false}>
+            {items.map((item) => (
+              <motion.li
+                key={item.productId}
+                layout
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 8, height: 0, marginBottom: 0 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-1.5 text-sm"
+                style={{ background: "var(--bg-hover)" }}
+              >
+                <span className="min-w-0 flex-1 truncate text-[var(--text-primary)]">{item.name}</span>
+                <input
+                  type="number"
+                  min={0}
+                  className="w-16 rounded-[var(--radius-sm)] border p-1 text-center"
+                  style={{ borderColor: "var(--border-light)", background: "var(--bg-card)" }}
+                  value={item.quantity}
+                  onChange={(e) => updateQuantity(item.productId, Number(e.target.value))}
+                  data-barcode-ignore="true"
+                />
+                <span className="w-16 text-right font-medium text-[var(--text-primary)]">
+                  {(item.unitPrice * item.quantity).toFixed(2)}
+                </span>
+                <button
+                  onClick={() => removeItem(item.productId)}
+                  className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition-colors"
+                  style={{ color: "var(--text-muted)" }}
+                  title="حذف المنتج"
+                >
+                  <Trash2 className="h-3.5 w-3.5" strokeWidth={1.75} />
+                </button>
+              </motion.li>
+            ))}
+          </AnimatePresence>
+        </ul>
+      )}
 
       <div className="flex items-center justify-between text-sm">
-        <label>
+        <label className="flex items-center gap-2 text-[var(--text-secondary)]">
           الخصم:
           <input
             type="number"
-            className="ms-2 w-20 rounded border p-1"
+            className="w-20 rounded-[var(--radius-sm)] border p-1"
+            style={{
+              borderColor: invalidDiscount ? "var(--color-danger-500)" : "var(--border-light)",
+              background: "var(--bg-card)",
+            }}
             value={discount}
             onChange={(e) => setDiscount(Number(e.target.value))}
             data-barcode-ignore="true"
           />
         </label>
-        <span className="font-semibold">الإجمالي الجديد: {total.toFixed(2)}</span>
+        <span
+          className="font-semibold"
+          style={{ color: invalidDiscount ? "var(--color-danger-600)" : "var(--text-primary)" }}
+        >
+          الإجمالي الجديد: {total.toFixed(2)}
+        </span>
       </div>
 
+      <AnimatePresence>
+        {invalidDiscount && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.15 }}
+            className="flex items-center gap-2 overflow-hidden rounded-[var(--radius-sm)] p-2 text-sm"
+            style={{ background: "var(--color-danger-50)", color: "var(--color-danger-600)" }}
+          >
+            <CircleAlert className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
+            <span>الخصم أكبر من إجمالي المنتجات — عدّل القيمة</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <input
-        className="w-full rounded border p-2 text-sm"
-        placeholder="سبب التعديل (إلزامي)"
+        className="yc-input"
+        placeholder="سبب التعديل (اختياري)"
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         data-barcode-ignore="true"
       />
 
-      {editSale.error && <p className="text-sm text-red-600">{editSale.error}</p>}
+      <AnimatePresence>
+        {editSale.error && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.15 }}
+            className="flex items-center gap-2 overflow-hidden rounded-[var(--radius-sm)] p-2 text-sm"
+            style={{ background: "var(--color-danger-50)", color: "var(--color-danger-600)" }}
+          >
+            <TriangleAlert className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
+            <span>{editSale.error}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex gap-2">
-        <button
+        <motion.button
+          whileTap={{ scale: 0.97 }}
           onClick={handleSubmit}
-          disabled={editSale.isLoading || items.length === 0 || reason.length < 3}
-          className="rounded bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-50"
+          disabled={editSale.isLoading || items.length === 0 || invalidDiscount}
+          className="yc-btn-primary !px-4 !py-1.5 !text-sm"
         >
-          {editSale.isLoading ? "جاري الحفظ..." : "حفظ التعديل"}
-        </button>
-        <button onClick={onCancel} className="rounded border px-3 py-1 text-sm">
+          {editSale.isLoading ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              جاري الحفظ...
+            </>
+          ) : (
+            "حفظ التعديل"
+          )}
+        </motion.button>
+        <button onClick={onCancel} className="yc-btn-secondary !px-3 !py-1.5 !text-sm">
           إلغاء
         </button>
       </div>

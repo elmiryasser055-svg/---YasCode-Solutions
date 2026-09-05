@@ -1,26 +1,28 @@
 // src/components/pos/ReturnForm.tsx
-//
-// إرجاع جزئي لمنتج من فاتورة — returns module (الباك-إند).
-//
-// ✅ محدَّث: كان هذا الملف يعيد استخدام `sales:reprint` كحل مؤقت لجلب معرّفات
-// sale_item الحقيقية (بأثر جانبي: طباعة فعلية إضافية عند كل فتح للنموذج).
-// الآن يستخدم `sales:get` المخصصة (قراءة فقط، بلا أي أثر جانبي) — القيد
-// التقني الذي كان موثَّقًا هنا سابقًا لم يعد موجودًا.
-
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../lib/ipcClient";
 import { useIpcMutation } from "../../hooks/useIpcMutation";
+import { Loader2, TriangleAlert, CircleAlert } from "lucide-react";
 
 interface SaleItemWithId {
   id: number;
+  productId: number; // ⭐ أضفنا هذا الحقل لمطابقة المنتج في المتجر
   productNameSnapshot: string;
   quantity: number;
   unitPrice: number;
 }
 
+// ⭐ نضيف واجهة لنتيجة الإرجاع لإرسالها للأب
+export interface ReturnResult {
+  productId: number;
+  returnedQty: number;
+  unitPrice: number;
+}
+
 interface Props {
   saleId: number;
-  onDone: () => void;
+  onDone: (result: ReturnResult) => void; // ⭐ تعديل لتمرير النتيجة
   onCancel: () => void;
 }
 
@@ -30,9 +32,20 @@ export function ReturnForm({ saleId, onDone, onCancel }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [reason, setReason] = useState("");
+  const [reason, setReason] = useState("لا يوجد سبب");
 
-  const createReturn = useIpcMutation(api().returns.create, { onSuccess: onDone });
+  // ⭐ تعديل onSuccess لإرسال البيانات بدل استدعاء onDone فارغة
+  const createReturn = useIpcMutation(api().returns.create, {
+    onSuccess: () => {
+      if (selectedItem) {
+        onDone({
+          productId: selectedItem.productId,
+          returnedQty: quantity,
+          unitPrice: selectedItem.unitPrice,
+        });
+      }
+    },
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -65,31 +78,48 @@ export function ReturnForm({ saleId, onDone, onCancel }: Props) {
     return item.quantity - (alreadyReturned[item.id] ?? 0);
   }
 
+  const selectedItem = items?.find((i) => i.id === selectedItemId) ?? null;
+  const remaining = selectedItem ? remainingFor(selectedItem) : null;
+  const exceedsRemaining = remaining !== null && quantity > remaining;
+
   async function handleSubmit() {
-    if (!selectedItemId || quantity <= 0 || reason.length < 2) return;
-    await createReturn.mutate({ saleItemId: selectedItemId, quantity, reason });
+    if (!selectedItemId || quantity <= 0 || exceedsRemaining) return;
+    const finalReason = reason.trim() === "" ? "لا يوجد" : reason.trim();
+    await createReturn.mutate({ saleItemId: selectedItemId, quantity, reason: finalReason });
   }
 
   return (
-    <div className="mt-3 space-y-3 border-t pt-3">
-      <h4 className="text-sm font-semibold">إرجاع منتج من الفاتورة</h4>
+    <div className="space-y-3">
+      {loadError && (
+        <div
+          className="flex items-center gap-2 rounded-[var(--radius-sm)] p-2 text-sm"
+          style={{ background: "var(--color-danger-50)", color: "var(--color-danger-600)" }}
+        >
+          <TriangleAlert className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
+          <span>{loadError}</span>
+        </div>
+      )}
 
-      {loadError && <p className="text-sm text-red-600">{loadError}</p>}
-      {!items && !loadError && <p className="text-sm text-gray-400">جاري التحميل...</p>}
+      {!items && !loadError && (
+        <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
+          <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
+          <span>جاري التحميل...</span>
+        </div>
+      )}
 
       {items && (
         <>
           <select
-            className="w-full rounded border p-2 text-sm"
+            className="yc-input"
             value={selectedItemId ?? ""}
             onChange={(e) => setSelectedItemId(Number(e.target.value) || null)}
           >
             <option value="">اختر منتجًا...</option>
             {items.map((item) => {
-              const remaining = remainingFor(item);
+              const rem = remainingFor(item);
               return (
-                <option key={item.id} value={item.id} disabled={remaining <= 0}>
-                  {item.productNameSnapshot} — المتبقي القابل للإرجاع: {remaining}
+                <option key={item.id} value={item.id} disabled={rem <= 0}>
+                  {item.productNameSnapshot} — المتبكي القابل للإرجاع: {rem}
                 </option>
               );
             })}
@@ -99,14 +129,15 @@ export function ReturnForm({ saleId, onDone, onCancel }: Props) {
             <input
               type="number"
               min={1}
-              className="w-24 rounded border p-2 text-sm"
+              max={remaining ?? undefined}
+              className="yc-input w-24"
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
               placeholder="الكمية"
               data-barcode-ignore="true"
             />
             <input
-              className="flex-1 rounded border p-2 text-sm"
+              className="yc-input flex-1"
               placeholder="سبب الإرجاع"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -114,17 +145,59 @@ export function ReturnForm({ saleId, onDone, onCancel }: Props) {
             />
           </div>
 
-          {createReturn.error && <p className="text-sm text-red-600">{createReturn.error}</p>}
+          <AnimatePresence>
+            {exceedsRemaining && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center gap-2 overflow-hidden rounded-[var(--radius-sm)] p-2 text-sm"
+                style={{ background: "var(--color-warning-50)", color: "var(--color-warning-600)" }}
+              >
+                <CircleAlert className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
+                <span>الكمية المدخلة أكبر من المتبقي القابل للإرجاع ({remaining})</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {createReturn.error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center gap-2 overflow-hidden rounded-[var(--radius-sm)] p-2 text-sm"
+                style={{ background: "var(--color-danger-50)", color: "var(--color-danger-600)" }}
+              >
+                <TriangleAlert className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
+                <span>{createReturn.error}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="flex gap-2">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.97 }}
               onClick={handleSubmit}
-              disabled={createReturn.isLoading || !selectedItemId || reason.length < 2}
-              className="rounded bg-orange-600 px-3 py-1 text-sm text-white disabled:opacity-50"
+              disabled={createReturn.isLoading || !selectedItemId || exceedsRemaining}
+              className="flex items-center gap-1.5 rounded-[var(--radius-sm)] px-3 py-1.5 text-sm font-semibold text-white"
+              style={{
+                background: "linear-gradient(135deg, var(--color-warning-500), var(--color-warning-600))",
+                opacity: createReturn.isLoading || !selectedItemId || exceedsRemaining ? 0.5 : 1,
+              }}
             >
-              {createReturn.isLoading ? "جاري الإرجاع..." : "تأكيد الإرجاع"}
-            </button>
-            <button onClick={onCancel} className="rounded border px-3 py-1 text-sm">
+              {createReturn.isLoading ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  جاري الإرجاع...
+                </>
+              ) : (
+                "تأكيد الإرجاع"
+              )}
+            </motion.button>
+            <button onClick={onCancel} className="yc-btn-secondary !px-3 !py-1.5 !text-sm">
               إلغاء
             </button>
           </div>

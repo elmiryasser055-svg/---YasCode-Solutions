@@ -78,10 +78,8 @@ YasCode-Supperette-Project
 │  │  │  └─ returns.service.ts
 │  │  ├─ sales
 │  │  │  ├─ sales.controller.ts
-│  │  │  ├─ sales.get.test.ts
 │  │  │  ├─ sales.ipc.ts
 │  │  │  ├─ sales.schema.ts
-│  │  │  ├─ sales.service.test.ts
 │  │  │  └─ sales.service.ts
 │  │  ├─ settings
 │  │  │  ├─ settings.controller.ts
@@ -136,8 +134,10 @@ YasCode-Supperette-Project
 │     │  │  ├─ LoginScreen.tsx
 │     │  │  ├─ Sidebar.test.tsx
 │     │  │  └─ Sidebar.tsx
+│     │  ├─ Nouveau dossier
 │     │  ├─ pos
 │     │  │  ├─ EditSaleForm.tsx
+│     │  │  ├─ QuickProducts.tsx
 │     │  │  ├─ ReturnForm.tsx
 │     │  │  └─ SaleScreen.tsx
 │     │  ├─ products
@@ -152,6 +152,7 @@ YasCode-Supperette-Project
 │     │  ├─ suppliers
 │     │  │  ├─ SupplierDetail.tsx
 │     │  │  └─ SuppliersScreen.tsx
+│     │  ├─ ui
 │     │  └─ users
 │     │     └─ UsersScreen.tsx
 │     ├─ hooks
@@ -159,14 +160,17 @@ YasCode-Supperette-Project
 │     │  ├─ useIpcMutation.test.ts
 │     │  ├─ useIpcMutation.ts
 │     │  ├─ useIpcQuery.ts
-│     │  └─ useKeyboardShortcuts.ts
+│     │  ├─ useKeyboardShortcuts.ts
+│     │  └─ useSound.ts
 │     ├─ i18n
 │     │  ├─ index.ts
 │     │  └─ locales
 │     │     ├─ ar.json
 │     │     └─ fr.json
 │     ├─ lib
-│     │  └─ ipcClient.ts
+│     │  ├─ ipcClient.ts
+│     │  ├─ toast.tsx
+│     │  └─ utils.ts
 │     ├─ main.tsx
 │     ├─ store
 │     │  ├─ authStore.ts
@@ -176,7 +180,9 @@ YasCode-Supperette-Project
 │     │  ├─ confirmStore.test.ts
 │     │  └─ confirmStore.ts
 │     ├─ styles
-│     │  └─ globals.css
+│     │  ├─ EXAMPLE.md
+│     │  ├─ globals.css
+│     │  └─ README.md
 │     └─ test-setup.ts
 ├─ logs
 ├─ package-lock.json
@@ -184,9 +190,11 @@ YasCode-Supperette-Project
 ├─ playwright.config.ts
 ├─ postcss.config.js
 ├─ ProjectAnalysis.md
+├─ README.md
 ├─ RUNNING.md
 ├─ schemaDB.md
 ├─ scripts
+│  ├─ seed-all.ts
 │  └─ seed-owner.ts
 ├─ tailwind.config.js
 ├─ tsconfig.electron.json

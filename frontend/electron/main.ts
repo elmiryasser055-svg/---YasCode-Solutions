@@ -44,6 +44,7 @@ app.whenReady().then(() => {
   loadEnv({
     DB_PATH: process.env.DB_PATH || path.join(app.getPath("userData"), "store.sqlite"),
   });
+  console.log("DB_PATH:", process.env.DB_PATH || path.join(app.getPath("userData"), "store.sqlite"));
 
   // ⭐ إصلاح حرج: مسار drizzle/migrations لا يمكن حسابه بأمان عبر __dirname
   // داخل lib/db.ts لأنه يختلف جذريًا بين وضع التطوير (بعد تصريف tsc إلى

@@ -46,7 +46,7 @@ export interface AppApi {
     importCsv: () => Promise<
       IpcResult<
         | { canceled: true }
-        | { created: number; skipped: number; errors: Array<{ line: number; reason: string }> }
+        | { created: number; skipped: number; errors: Array<{ line: number; reason?: string }> }
       >
     >;
   };
@@ -64,12 +64,12 @@ export interface AppApi {
       discount?: number;
       cashRegisterSessionId: number;
     }) => Promise<IpcResult<Record<string, unknown>>>;
-    cancel: (input: { saleId: number; reason: string }) => Promise<IpcResult<{ success: true }>>;
+    cancel: (input: { saleId: number; reason?: string }) => Promise<IpcResult<{ success: true }>>;
     edit: (input: {
       saleId: number;
       items: Array<{ productId: number; quantity: number }>;
-      discount?: number;
-      reason: string;
+      discount?: number ;
+      reason?: string | null;
     }) => Promise<IpcResult<Record<string, unknown>>>;
     reprint: (input: { saleId: number }) => Promise<IpcResult<Record<string, unknown>>>;
     get: (input: { saleId: number }) => Promise<
@@ -134,7 +134,7 @@ export interface AppApi {
     create: (input: {
       saleItemId: number;
       quantity: number;
-      reason: string;
+      reason?: string;
     }) => Promise<IpcResult<Record<string, unknown>>>;
     getForSale: (saleId: number) => Promise<IpcResult<Array<Record<string, unknown>>>>;
   };

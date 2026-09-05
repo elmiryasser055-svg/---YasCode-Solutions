@@ -2,8 +2,13 @@
 import { z } from "zod";
 
 const saleItemInputSchema = z.object({
-  productId: z.number().int().positive(),
+  productId: z.number().int().positive().optional(), // ⭐ أصبح اختيارياً
   quantity: z.number().positive(), // decimal مسموح (بيع بالوزن)
+  // حقول السعر الحر (تُرسل فقط إذا لم يوجد productId)
+  customName: z.string().min(2).max(150).optional(),
+  customPrice: z.number().min(0).optional(),
+}).refine(d => d.productId || (d.customName && d.customPrice !== undefined), {
+  message: "Either productId or customName/customPrice must be provided"
 });
 
 export const createSaleSchema = z.object({

@@ -132,13 +132,11 @@ export async function recordSupplierPayment(input: RecordSupplierPaymentInput, s
 }
 
 export async function listPurchasesBySupplier(supplierId: number) {
-  // خارج transaction — await عادي وآمن هنا
   const db = getDb();
   return db.query.purchases.findMany({
     where: eq(purchases.supplierId, supplierId),
-    with: { items: true },
+    // تم إزالة with: { items: true } لأننا لا نحتاجها في هذه الواجهة
     orderBy: (p, { desc }) => [desc(p.purchaseDate)],
   });
 }
-
 export { getSupplierDebt };

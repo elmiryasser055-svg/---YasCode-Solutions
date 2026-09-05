@@ -5,6 +5,8 @@
 // تصميم الباك-إند في sales.service.ts الذي يحسب كل شيء من مدخلات نظيفة دفعة واحدة.
 
 import { create } from "zustand";
+import type { EditableSaleItem } from '../components/pos/EditSaleForm';
+
 
 export interface CartItem {
   productId: number;
@@ -66,4 +68,74 @@ export const useCartStore = create<CartState>((set, get) => ({
   subtotal: () => get().items.reduce((sum, i) => sum + i.sellingPrice * i.quantity, 0),
 
   total: () => get().subtotal() - get().discount,
+}));
+
+
+
+export type SaleRecord = {
+  id: number;
+  saleNumber: string;
+  total: number;
+  discount: number;
+  items: EditableSaleItem[];
+};
+
+export interface ReturnData {
+  productId: number;
+  returnedQty: number;
+  unitPrice: number;
+}
+
+const MAX_RECENT_SALES = 5;
+
+interface SalesState {
+  recentSales: SaleRecord[];
+  addRecentSale: (sale: SaleRecord) => void;
+  updateRecentSale: (sale: SaleRecord) => void;
+  removeRecentSale: (saleId: number) => void;
+  updateRecentSaleAfterReturn: (saleId: number, data: ReturnData) => void; // ⭐ دالة جديدة
+}
+
+export const useSalesStore = create<SalesState>((set) => ({
+  recentSales: [],
+  
+  addRecentSale: (sale) =>
+    set((state) => ({
+      recentSales: [sale, ...state.recentSales].slice(0, MAX_RECENT_SALES),
+    })),
+  
+  updateRecentSale: (updatedSale) =>
+    set((state) => ({
+      recentSales: state.recentSales.map((s) =>
+        s.id === updatedSale.id ? { ...s, ...updatedSale } : s
+      ),
+    })),
+    
+  removeRecentSale: (saleId) =>
+    set((state) => ({
+      recentSales: state.recentSales.filter((s) => s.id !== saleId),
+    })),
+
+  // ⭐ دالة خصم الكمية المرتجعة وإعادة حساب الإجمالي
+  updateRecentSaleAfterReturn: (saleId, data) =>
+    set((state) => ({
+      recentSales: state.recentSales.map((sale) => {
+        if (sale.id !== saleId) return sale;
+
+        // خصم الكمية المرتجعة من المنتج المحدد
+        const newItems = sale.items
+          .map((item) =>
+            item.productId === data.productId
+              ? { ...item, quantity: item.quantity - data.returnedQty }
+              : item
+          )
+          .filter((item) => item.quantity > 0); // حذف المنتج إذا وصلت كميته إلى 0
+
+        // إعادة حساب الإجمالي بناءً على الكميات الجديدة
+        const newSubtotal = newItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+        const newTotal = Math.max(0, newSubtotal - sale.discount);
+
+        return { ...sale, items: newItems, total: newTotal };
+      }),
+    })),
 }));

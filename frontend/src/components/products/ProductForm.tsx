@@ -1,9 +1,6 @@
 // src/components/products/ProductForm.tsx
-//
-// ⭐ يسدّ فجوة: أضيف اختيار/إنشاء فئة (categories module كان بلا أي واجهة
-// تستدعيه إطلاقًا)، بالإضافة لحقل categoryId المفقود سابقًا في هذا النموذج.
-
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../lib/ipcClient";
 import { useIpcMutation } from "../../hooks/useIpcMutation";
 import { useIpcQuery } from "../../hooks/useIpcQuery";
@@ -24,10 +21,10 @@ interface ProductData {
 interface Props {
   initial?: ProductData;
   onDone: () => void;
+  onClose: () => void;
 }
 
-/** يخدم الإنشاء والتعديل معًا — إن وُجد initial.id نستدعي update، وإلا create */
-export function ProductForm({ initial, onDone }: Props) {
+export function ProductForm({ initial, onDone, onClose }: Props) {
   const isEdit = !!initial?.id;
   const [form, setForm] = useState<ProductData>(
     initial ?? {
@@ -88,150 +85,201 @@ export function ProductForm({ initial, onDone }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border p-4">
-      <h3 className="font-semibold">{isEdit ? "تعديل منتج" : "منتج جديد"}</h3>
-
-      {!isEdit && (
-        <input
-          className="w-full rounded border p-2 text-sm"
-          placeholder="الباركود (اتركه فارغًا لتوليده لاحقًا)"
-          value={form.barcode ?? ""}
-          onChange={(e) => update("barcode", e.target.value)}
-          data-barcode-ignore="true"
-        />
-      )}
-
-      <input
-        className="w-full rounded border p-2 text-sm"
-        placeholder="اسم المنتج"
-        value={form.name}
-        onChange={(e) => update("name", e.target.value)}
-        data-barcode-ignore="true"
-      />
-
-      {/* ⭐ اختيار/إنشاء فئة */}
-      <div>
-        <label className="block text-sm">الفئة (اختياري)</label>
-        <div className="mt-1 flex gap-2">
-          <select
-            className="flex-1 rounded border p-2 text-sm"
-            value={form.categoryId ?? ""}
-            onChange={(e) => update("categoryId", e.target.value ? Number(e.target.value) : null)}
-          >
-            <option value="">بلا فئة</option>
-            {(categories.data ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => setShowNewCategoryInput((v) => !v)}
-            className="rounded border px-3 text-sm"
-          >
-            + فئة
-          </button>
+    <div className="yc-card h-full flex flex-col">
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h3 className="font-bold text-lg text-[var(--text-primary)]">
+            {isEdit ? "تعديل منتج" : "إضافة منتج جديد"}
+          </h3>
+          <p className="text-sm text-[var(--text-muted)]">أدخل تفاصيل المنتج بدقة</p>
         </div>
-        {showNewCategoryInput && (
-          <div className="mt-2 flex gap-2">
+        <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-1">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4 flex-1 flex flex-col overflow-y-auto">
+        {!isEdit && (
+          <label className="block">
+            <span className="text-[var(--text-secondary)] text-sm mb-1 block">الباركود</span>
             <input
-              className="flex-1 rounded border p-2 text-sm"
-              placeholder="اسم الفئة الجديدة"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
+              className="yc-input"
+              placeholder="اتركه فارغًا لتوليده تلقائيًا"
+              value={form.barcode ?? ""}
+              onChange={(e) => update("barcode", e.target.value)}
               data-barcode-ignore="true"
             />
+          </label>
+        )}
+
+        <label className="block">
+          <span className="text-[var(--text-secondary)] text-sm mb-1 block">اسم المنتج</span>
+          <input
+            className="yc-input"
+            placeholder="مثال: زيت دوار الشمس"
+            value={form.name}
+            onChange={(e) => update("name", e.target.value)}
+            data-barcode-ignore="true"
+            required
+          />
+        </label>
+
+        {/* Category Selection */}
+        <div>
+          <span className="text-[var(--text-secondary)] text-sm mb-1 block">الفئة</span>
+          <div className="flex gap-2">
+            <select
+              className="yc-input flex-1"
+              value={form.categoryId ?? ""}
+              onChange={(e) => update("categoryId", e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">بلا فئة</option>
+              {(categories.data ?? []).map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
             <button
               type="button"
-              onClick={() => createCategory.mutate({ name: newCategoryName })}
-              disabled={createCategory.isLoading || newCategoryName.length < 2}
-              className="rounded bg-blue-600 px-3 text-sm text-white disabled:opacity-50"
+              onClick={() => setShowNewCategoryInput((v) => !v)}
+              className={`yc-btn-secondary !px-3 ${showNewCategoryInput ? "bg-[var(--color-primary-50)] border-[var(--color-primary-200)] text-[var(--color-primary-600)]" : ""}`}
+              title="إضافة فئة جديدة"
             >
-              حفظ
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
             </button>
           </div>
-        )}
-        {createCategory.error && <p className="text-xs text-red-600">{createCategory.error}</p>}
-      </div>
-
-      {!isEdit && (
-        <div className="flex gap-2">
-          <select
-            className="rounded border p-2 text-sm"
-            value={form.unitType}
-            onChange={(e) => update("unitType", e.target.value as "piece" | "weight")}
-          >
-            <option value="piece">بالقطعة</option>
-            <option value="weight">بالوزن</option>
-          </select>
-          {form.unitType === "weight" && (
-            <select
-              className="rounded border p-2 text-sm"
-              value={form.weightUnit ?? "kg"}
-              onChange={(e) => update("weightUnit", e.target.value as "kg" | "g")}
-            >
-              <option value="kg">كيلوغرام</option>
-              <option value="g">غرام</option>
-            </select>
-          )}
+          
+          <AnimatePresence>
+            {showNewCategoryInput && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0, marginTop: 0 }} 
+                animate={{ opacity: 1, height: 'auto', marginTop: 8 }} 
+                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                className="flex gap-2 overflow-hidden"
+              >
+                <input
+                  className="yc-input flex-1"
+                  placeholder="اسم الفئة الجديدة"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  data-barcode-ignore="true"
+                />
+                <button
+                  type="button"
+                  onClick={() => createCategory.mutate({ name: newCategoryName })}
+                  disabled={createCategory.isLoading || newCategoryName.length < 2}
+                  className="yc-btn-primary !px-4 disabled:opacity-50"
+                >
+                  حفظ
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      )}
 
-      <div className="flex gap-2">
-        <label className="flex-1 text-sm">
-          سعر الشراء
-          <input
-            type="number"
-            className="mt-1 w-full rounded border p-2"
-            value={form.purchasePrice}
-            onChange={(e) => update("purchasePrice", Number(e.target.value))}
-            data-barcode-ignore="true"
-          />
-        </label>
-        <label className="flex-1 text-sm">
-          سعر البيع
-          <input
-            type="number"
-            className="mt-1 w-full rounded border p-2"
-            value={form.sellingPrice}
-            onChange={(e) => update("sellingPrice", Number(e.target.value))}
-            data-barcode-ignore="true"
-          />
-        </label>
-      </div>
+        {!isEdit && (
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-[var(--text-secondary)] text-sm mb-1 block">نوع البيع</span>
+              <select
+                className="yc-input"
+                value={form.unitType}
+                onChange={(e) => update("unitType", e.target.value as "piece" | "weight")}
+              >
+                <option value="piece">بالقطعة</option>
+                <option value="weight">بالوزن</option>
+              </select>
+            </label>
+            {form.unitType === "weight" && (
+              <label className="block">
+                <span className="text-[var(--text-secondary)] text-sm mb-1 block">وحدة القياس</span>
+                <select
+                  className="yc-input"
+                  value={form.weightUnit ?? "kg"}
+                  onChange={(e) => update("weightUnit", e.target.value as "kg" | "g")}
+                >
+                  <option value="kg">كيلوغرام</option>
+                  <option value="g">غرام</option>
+                </select>
+              </label>
+            )}
+          </div>
+        )}
 
-      <label className="block text-sm">
-        حد التنبيه بالكمية المنخفضة
-        <input
-          type="number"
-          className="mt-1 w-full rounded border p-2"
-          value={form.lowStockThreshold}
-          onChange={(e) => update("lowStockThreshold", Number(e.target.value))}
-          data-barcode-ignore="true"
-        />
-      </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-[var(--text-secondary)] text-sm mb-1 block">سعر الشراء</span>
+            <input
+              type="number"
+              step="0.01"
+              className="yc-input"
+              value={form.purchasePrice}
+              onChange={(e) => update("purchasePrice", Number(e.target.value))}
+              data-barcode-ignore="true"
+              required
+            />
+          </label>
+          <label className="block">
+            <span className="text-[var(--text-secondary)] text-sm mb-1 block">سعر البيع</span>
+            <input
+              type="number"
+              step="0.01"
+              className="yc-input"
+              value={form.sellingPrice}
+              onChange={(e) => update("sellingPrice", Number(e.target.value))}
+              data-barcode-ignore="true"
+              required
+            />
+          </label>
+        </div>
 
-      <label className="block text-sm">
-        تاريخ الصلاحية (اختياري)
-        <input
-          type="date"
-          className="mt-1 w-full rounded border p-2"
-          value={form.expiryDate ?? ""}
-          onChange={(e) => update("expiryDate", e.target.value || null)}
-          data-barcode-ignore="true"
-        />
-      </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-[var(--text-secondary)] text-sm mb-1 block">حد التنبيه (الكمية)</span>
+            <input
+              type="number"
+              className="yc-input"
+              value={form.lowStockThreshold}
+              onChange={(e) => update("lowStockThreshold", Number(e.target.value))}
+              data-barcode-ignore="true"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[var(--text-secondary)] text-sm mb-1 block">تاريخ الصلاحية</span>
+            <input
+              type="date"
+              className="yc-input"
+              value={form.expiryDate ?? ""}
+              onChange={(e) => update("expiryDate", e.target.value || null)}
+              data-barcode-ignore="true"
+            />
+          </label>
+        </div>
 
-      {mutation.error && <p className="text-sm text-red-600">{mutation.error}</p>}
+        {mutation.error && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            className="text-sm text-[var(--color-danger-600)] bg-[var(--color-danger-50)] p-2 rounded-md animate-shake"
+          >
+            {mutation.error}
+          </motion.div>
+        )}
 
-      <button
-        type="submit"
-        disabled={mutation.isLoading || form.name.length < 2}
-        className="w-full rounded-md bg-blue-600 py-2 text-white disabled:opacity-50"
-      >
-        {mutation.isLoading ? "جاري الحفظ..." : isEdit ? "حفظ التعديلات" : "إضافة المنتج"}
-      </button>
-    </form>
+        <div className="mt-auto pt-4">
+          <button
+            type="submit"
+            disabled={mutation.isLoading || form.name.length < 2}
+            className="yc-btn-primary w-full py-3"
+          >
+            {mutation.isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                جاري الحفظ...
+              </span>
+            ) : isEdit ? "حفظ التعديلات" : "إضافة المنتج"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

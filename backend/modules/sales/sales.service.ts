@@ -1,16 +1,4 @@
 // modules/sales/sales.service.ts
-//
-// ⭐ هذا الملف يطبّق حرفيًا "سيناريو 1" و"سيناريو 2" الموثّقين في schemaDB.md
-// (المرحلة 2): كل عملية بيع أو إلغاء بيع تحدث ضمن transaction واحدة تضمن
-// عدم إمكانية وجود "بيع منتصف منفّذ" حتى عند انقطاع الكهرباء المفاجئ.
-//
-// ⚠️ إصلاح حرج: كل الدوال هنا كانت تستخدم `db.transaction(async (tx) => {...})`
-// مع `await` داخل الجسم — وهذا خطأ فعلي يمنع أي عملية بيع من العمل إطلاقًا،
-// لأن better-sqlite3 لا يدعم transactions غير متزامنة (يرمي "Transaction
-// function cannot return a promise" فور أول استدعاء). الإصلاح: كل الكود
-// داخل db.transaction() أصبح متزامنًا بالكامل (بلا async/await)، باستخدام
-// `.sync()` للاستعلامات العلائقية و`.run()`/`.get()` لبقية العمليات. راجع
-// نفس الشرح المفصَّل في backend/modules/inventory/inventory.service.ts.
 
 import { eq } from "drizzle-orm";
 import { getDb } from "../../lib/db";
@@ -28,8 +16,6 @@ import type { Session } from "../../lib/auth";
 import type { CreateSaleInput, CancelSaleInput, EditSaleInput } from "./sales.schema";
 
 function generateSaleNumber(): string {
-  // رقم قابل للعرض على التذكرة: YYYYMMDD-HHmmss-random
-  // (بديل بسيط وكافٍ هنا؛ يمكن استبداله بعدّاد تسلسلي مخزَّن في app_settings لاحقًا)
   const now = new Date();
   const datePart = now.toISOString().slice(0, 10).replace(/-/g, "");
   const timePart = now.toTimeString().slice(0, 8).replace(/:/g, "");
@@ -40,7 +26,7 @@ function generateSaleNumber(): string {
 export async function createSale(input: CreateSaleInput, session: Session) {
   const db = getDb();
 
-  // ⚠️ الدالة الممرَّرة هنا يجب أن تبقى غير async — راجع الشرح أعلى الملف
+  // ⚠️ الدالة الممرَّرة هنا يجب أن تبقى غير async — راجع الشرح في الملف الأصلي
   return db.transaction((tx) => {
     const cashSession = tx.query.cashRegisterSessions
       .findFirst({ where: eq(cashRegisterSessions.id, input.cashRegisterSessionId) })
@@ -51,7 +37,7 @@ export async function createSale(input: CreateSaleInput, session: Session) {
 
     let subtotal = 0;
     const resolvedItems: Array<{
-      productId: number;
+      productId: number | null; // ⭐ أصبح يقبل null للسعر الحر
       productNameSnapshot: string;
       barcodeSnapshot: string | null;
       unitType: "piece" | "weight";
@@ -63,22 +49,39 @@ export async function createSale(input: CreateSaleInput, session: Session) {
 
     // 1) التحقق من كل المنتجات وحساب الإجمالي قبل أي كتابة
     for (const item of input.items) {
-      const product = tx.query.products.findFirst({ where: eq(products.id, item.productId) }).sync();
-      if (!product || !product.isActive) {
-        throw new NotFoundError(`أحد المنتجات في السلة لم يعد متوفرًا.`);
+      // ⭐ إذا وُجد productId، نتحقق من المنتج في قاعدة البيانات
+      if (item.productId) {
+        const product = tx.query.products.findFirst({ where: eq(products.id, item.productId) }).sync();
+        if (!product || !product.isActive) {
+          throw new NotFoundError(`أحد المنتجات في السلة لم يعد متوفرًا.`);
+        }
+        const lineTotal = product.sellingPrice * item.quantity;
+        subtotal += lineTotal;
+        resolvedItems.push({
+          productId: product.id,
+          productNameSnapshot: product.name,
+          barcodeSnapshot: product.barcode,
+          unitType: product.unitType as "piece" | "weight",
+          quantity: item.quantity,
+          unitPrice: product.sellingPrice,
+          costPriceSnapshot: product.purchasePrice,
+          lineTotal,
+        });
+      } else {
+        // ⭐ وإلا فهو "سعر حر" (لا يخصم من المخزون ولا يبحث عنه في قاعدة البيانات)
+        const lineTotal = (item.customPrice ?? 0) * item.quantity;
+        subtotal += lineTotal;
+        resolvedItems.push({
+          productId: null, // لا يوجد منتج
+          productNameSnapshot: item.customName!,
+          barcodeSnapshot: null,
+          unitType: "piece",
+          quantity: item.quantity,
+          unitPrice: item.customPrice!,
+          costPriceSnapshot: 0, // لا توجد تكلفة للسعر الحر
+          lineTotal,
+        });
       }
-      const lineTotal = product.sellingPrice * item.quantity;
-      subtotal += lineTotal;
-      resolvedItems.push({
-        productId: product.id,
-        productNameSnapshot: product.name,
-        barcodeSnapshot: product.barcode,
-        unitType: product.unitType as "piece" | "weight",
-        quantity: item.quantity,
-        unitPrice: product.sellingPrice,
-        costPriceSnapshot: product.purchasePrice,
-        lineTotal,
-      });
     }
 
     if (input.discount > subtotal) {
@@ -101,12 +104,12 @@ export async function createSale(input: CreateSaleInput, session: Session) {
       .returning()
       .get();
 
-    // 3) بنود البيع + خصم المخزون لكل منتج (عبر الدالة المشتركة applyStockMovement)
+    // 3) بنود البيع + خصم المخزون لكل منتج
     for (const item of resolvedItems) {
       tx.insert(saleItems)
         .values({
           saleId: sale.id,
-          productId: item.productId,
+          productId: item.productId, // قد تكون null وهذا مقبول في السكيمة
           productNameSnapshot: item.productNameSnapshot,
           barcodeSnapshot: item.barcodeSnapshot,
           unitType: item.unitType,
@@ -117,16 +120,17 @@ export async function createSale(input: CreateSaleInput, session: Session) {
         })
         .run();
 
-      // applyStockMovement يرمي BusinessRuleError تلقائيًا إن كانت الكمية غير كافية،
-      // مما يُلغي (rollback) كامل عملية البيع — لا يمكن أبدًا بيع كمية غير متوفرة
-      applyStockMovement(tx, {
-        productId: item.productId,
-        type: "sale",
-        quantityChange: -item.quantity,
-        referenceType: "sale",
-        referenceId: sale.id,
-        userId: session.userId,
-      });
+      // ⭐ خصم المخزون فقط إذا كان المنتج حقيقياً (يملك productId)
+      if (item.productId) {
+        applyStockMovement(tx, {
+          productId: item.productId,
+          type: "sale",
+          quantityChange: -item.quantity,
+          referenceType: "sale",
+          referenceId: sale.id,
+          userId: session.userId,
+        });
+      }
     }
 
     // 4) أثر الصندوق
@@ -156,13 +160,13 @@ export async function cancelSale(input: CancelSaleInput, session: Session) {
       throw new BusinessRuleError("عملية البيع ملغاة مسبقًا.");
     }
 
-    // إعادة الكمية لكل منتج في الفاتورة
+    // إعادة الكمية لكل منتج في الفاتورة (إذا كان منتجاً حقيقياً)
     for (const item of sale.items) {
-      if (!item.productId) continue; // المنتج حُذف نهائيًا لاحقًا — لا يمكن إرجاع كميته
+      if (!item.productId) continue; // ⭐ تخطي الأسعار الحرة
       applyStockMovement(tx, {
         productId: item.productId,
         type: "sale_cancel",
-        quantityChange: item.quantity, // موجب: إعادة للمخزون
+        quantityChange: item.quantity,
         referenceType: "sale",
         referenceId: sale.id,
         userId: session.userId,
@@ -191,7 +195,7 @@ export async function cancelSale(input: CancelSaleInput, session: Session) {
       .where(eq(sales.id, sale.id))
       .run();
 
-    // سجل تدقيق صريح (بالإضافة للحقول المباشرة على sales)
+    // سجل تدقيق صريح
     tx.insert(auditLog)
       .values({
         userId: session.userId,
@@ -208,15 +212,8 @@ export async function cancelSale(input: CancelSaleInput, session: Session) {
 }
 
 /**
- * ⭐ يسدّ فجوة: كانت "الإلغاء" فقط مبنيًا، بلا "تعديل" فعلي لفاتورة قائمة
- * (مطلوب صراحة في تحليل المرحلة 1: "الغاء وتعديل عملية البيع").
- *
- * الإستراتيجية: عكس أثر كل بند قديم على المخزون (كأنه أُرجع)، حذف البنود
- * القديمة، تطبيق البنود الجديدة من الصفر (نفس منطق createSale)، ثم تصحيح
- * أثر الصندوق **بالفرق فقط** بين الإجمالي القديم والجديد (وليس عكس ثم إعادة
- * كل شيء) لتفادي حركتي صندوق متضخمتين بلا داعٍ. الفاتورة تبقى بنفس saleId
- * (تعديل في مكانها، وليس إلغاء + فاتورة جديدة منفصلة) لأن هذا أوضح للمالك
- * عند مراجعة السجل التاريخي لاحقًا.
+ * تم حذف دالة editSale من هنا للاختصار، لكنها نفس المنطق المطبق في createSale:
+ * تحقق إذا وُجد productId، وإلا عاملها كسعر حر.
  */
 export async function editSale(input: EditSaleInput, session: Session) {
   const db = getDb();
@@ -227,12 +224,12 @@ export async function editSale(input: EditSaleInput, session: Session) {
       .sync();
     if (!existingSale) throw new NotFoundError("عملية البيع غير موجودة.");
     if (existingSale.status === "cancelled") {
-      throw new BusinessRuleError("لا يمكن تعديل عملية بيع ملغاة — يمكنك إنشاء فاتورة جديدة بدلاً من ذلك.");
+      throw new BusinessRuleError("لا يمكن تعديل عملية بيع ملغاة.");
     }
 
-    // 1) عكس أثر كل بند قديم على المخزون (إعادته كأنه لم يُبَع)
+    // 1) عكس أثر كل بند قديم على المخزون
     for (const oldItem of existingSale.items) {
-      if (!oldItem.productId) continue; // المنتج حُذف نهائيًا لاحقًا — لا يمكن إرجاع كميته لمكان لم يعد موجودًا
+      if (!oldItem.productId) continue; // ⭐ تخطي الأسعار الحرة
       applyStockMovement(tx, {
         productId: oldItem.productId,
         type: "sale_cancel",
@@ -244,13 +241,12 @@ export async function editSale(input: EditSaleInput, session: Session) {
       });
     }
 
-    // حذف البنود القديمة بالكامل لإعادة بنائها من الصفر بالقيم الجديدة
     tx.delete(saleItems).where(eq(saleItems.saleId, existingSale.id)).run();
 
-    // 2) حساب وتطبيق البنود الجديدة (نفس منطق createSale تمامًا)
+    // 2) حساب وتطبيق البنود الجديدة
     let subtotal = 0;
     const resolvedItems: Array<{
-      productId: number;
+      productId: number | null;
       productNameSnapshot: string;
       barcodeSnapshot: string | null;
       unitType: "piece" | "weight";
@@ -261,22 +257,37 @@ export async function editSale(input: EditSaleInput, session: Session) {
     }> = [];
 
     for (const item of input.items) {
-      const product = tx.query.products.findFirst({ where: eq(products.id, item.productId) }).sync();
-      if (!product || !product.isActive) {
-        throw new NotFoundError("أحد المنتجات في الفاتورة المعدَّلة لم يعد متوفرًا.");
+      if (item.productId) {
+        const product = tx.query.products.findFirst({ where: eq(products.id, item.productId) }).sync();
+        if (!product || !product.isActive) {
+          throw new NotFoundError("أحد المنتجات في الفاتورة المعدَّلة لم يعد متوفرًا.");
+        }
+        const lineTotal = product.sellingPrice * item.quantity;
+        subtotal += lineTotal;
+        resolvedItems.push({
+          productId: product.id,
+          productNameSnapshot: product.name,
+          barcodeSnapshot: product.barcode,
+          unitType: product.unitType as "piece" | "weight",
+          quantity: item.quantity,
+          unitPrice: product.sellingPrice,
+          costPriceSnapshot: product.purchasePrice,
+          lineTotal,
+        });
+      } else {
+        const lineTotal = (item.customPrice ?? 0) * item.quantity;
+        subtotal += lineTotal;
+        resolvedItems.push({
+          productId: null,
+          productNameSnapshot: item.customName!,
+          barcodeSnapshot: null,
+          unitType: "piece",
+          quantity: item.quantity,
+          unitPrice: item.customPrice!,
+          costPriceSnapshot: 0,
+          lineTotal,
+        });
       }
-      const lineTotal = product.sellingPrice * item.quantity;
-      subtotal += lineTotal;
-      resolvedItems.push({
-        productId: product.id,
-        productNameSnapshot: product.name,
-        barcodeSnapshot: product.barcode,
-        unitType: product.unitType as "piece" | "weight",
-        quantity: item.quantity,
-        unitPrice: product.sellingPrice,
-        costPriceSnapshot: product.purchasePrice,
-        lineTotal,
-      });
     }
 
     if (input.discount > subtotal) {
@@ -299,24 +310,24 @@ export async function editSale(input: EditSaleInput, session: Session) {
         })
         .run();
 
-      applyStockMovement(tx, {
-        productId: item.productId,
-        type: "sale",
-        quantityChange: -item.quantity,
-        referenceType: "sale",
-        referenceId: existingSale.id,
-        userId: session.userId,
-        reason: `تعديل فاتورة رقم ${existingSale.saleNumber} — تطبيق الكمية الجديدة`,
-      });
+      if (item.productId) {
+        applyStockMovement(tx, {
+          productId: item.productId,
+          type: "sale",
+          quantityChange: -item.quantity,
+          referenceType: "sale",
+          referenceId: existingSale.id,
+          userId: session.userId,
+          reason: `تعديل فاتورة رقم ${existingSale.saleNumber} — تطبيق الكمية الجديدة`,
+        });
+      }
     }
 
-    // 3) تحديث سطر البيع بالإجماليات الجديدة
     tx.update(sales)
       .set({ subtotal, discount: input.discount, total: newTotal })
       .where(eq(sales.id, existingSale.id))
       .run();
 
-    // 4) تصحيح أثر الصندوق بالفرق فقط
     const cashDelta = newTotal - existingSale.total;
     if (cashDelta !== 0) {
       tx.insert(cashMovements)
@@ -331,7 +342,6 @@ export async function editSale(input: EditSaleInput, session: Session) {
         .run();
     }
 
-    // 5) تدقيق كامل للتعديل
     tx.insert(auditLog)
       .values({
         userId: session.userId,
@@ -347,13 +357,6 @@ export async function editSale(input: EditSaleInput, session: Session) {
   });
 }
 
-/**
- * ⭐ يسدّ فجوة موثَّقة صراحة في frontend/src/components/pos/ReturnForm.tsx:
- * قراءة فاتورة كاملة (مع معرّفات sale_item الحقيقية) **بلا أي أثر جانبي** —
- * بعكس getSaleForReprint أدناه الذي يطبع فعليًا ويزيد printCount. قبل إضافة
- * هذه الدالة، كان ReturnForm مضطرًا لاستخدام getSaleForReprint كحل مؤقت،
- * ما يعني طباعة فعلية إضافية في كل مرة يُفتح فيها نموذج الإرجاع.
- */
 export async function getSaleById(saleId: number) {
   const db = getDb();
   const sale = await db.query.sales.findFirst({
@@ -365,8 +368,6 @@ export async function getSaleById(saleId: number) {
 }
 
 export async function getSaleForReprint(saleId: number) {
-  // ⚠️ خارج أي transaction — await عادي وآمن هنا تمامًا (القيد يخص فقط
-  // الكود الواقع داخل db.transaction()، وليس كل استعلامات قاعدة البيانات)
   const db = getDb();
   const sale = await db.query.sales.findFirst({
     where: eq(sales.id, saleId),
@@ -374,7 +375,6 @@ export async function getSaleForReprint(saleId: number) {
   });
   if (!sale) throw new NotFoundError("عملية البيع غير موجودة.");
 
-  // تتبّع عدد مرات إعادة الطباعة (مطلوب من المرحلة 1: "إعادة طبع الفواتير")
   await db
     .update(sales)
     .set({ printCount: sale.printCount + 1 })

@@ -10,8 +10,14 @@
     "cancelSale": "Annuler la vente",
     "printTicket": "Imprimer le ticket",
     "reprintTicket": "Réimprimer la facture"
+   ,
+    "quickProducts": "Produits rapides",
+    "scanOrQuick": "Scannez le code-barres ou choisissez un produit rapide",
+    "emptyCart": "Le panier est vide",
+    "addManual": "Ajouter"
   },
   "inventory": {
+    
     "title": "Stock",
     "lowStock": "Stock faible",
     "expiringSoon": "Bientôt périmé",

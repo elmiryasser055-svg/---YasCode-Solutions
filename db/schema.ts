@@ -419,3 +419,15 @@ export const cashRegisterSessionsRelations = relations(
     sales: many(sales),
   })
 );
+
+// أضف هذه العلاقة لحل مشكلة Ambiguous Relations في Drizzle
+export const purchaseItemsRelations = relations(purchaseItems, ({ one }) => ({
+  purchase: one(purchases, {
+    fields: [purchaseItems.purchaseId],
+    references: [purchases.id],
+  }),
+  product: one(products, {
+    fields: [purchaseItems.productId],
+    references: [products.id],
+  }),
+}));

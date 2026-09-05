@@ -37,7 +37,7 @@ export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 export const productIdSchema = z.object({ id: z.number().int().positive() });
 
 export const searchProductsSchema = z.object({
-  query: z.string().min(1).max(100),
+  query: z.string().max(100),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(100).default(30),
 });

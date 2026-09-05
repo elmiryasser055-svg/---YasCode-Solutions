@@ -19,3 +19,4 @@ export type InventoryAdjustmentInput = z.infer<typeof inventoryAdjustmentSchema>
 export const expiringProductsQuerySchema = z.object({
   withinDays: z.number().int().positive().default(30),
 });
+ 
