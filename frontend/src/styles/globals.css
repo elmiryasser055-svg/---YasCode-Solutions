@@ -5,28 +5,29 @@
 /* ============================================================
    YasCode Supérette — Global Styles
    تصميم موحد: ألوان هادئة، animations غنية، تجربة سلسة
+   يدعم الوضع الفاتح والوضع المظلم (Dark Mode)
    ============================================================ */
 
-/* ── 1. متغيرات الألوان (CSS Variables) ── */
+/* ── 1. متغيرات الألوان (CSS Variables) — الوضع الفاتح ── */
 :root {
   /* Primary: أزرق داكن هادئ */
-  --color-primary-50:  #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-200: #bfdbfe;
-  --color-primary-300: #93c5fd;
-  --color-primary-400: #60a5fa;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
-  --color-primary-800: #1e40af;
-  --color-primary-900: #1e3a8a;
+  --color-primary-50:  #fdf2f4;
+  --color-primary-100: #fce7ec;
+  --color-primary-200: #fad1db;
+  --color-primary-300: #f5a8bc;
+  --color-primary-400: #ea6f93;
+  --color-primary-500: #c81e5c;
+  --color-primary-600: #a01449;
+  --color-primary-700: #7a0f38;
+  --color-primary-800: #5c0c2b;
+  --color-primary-900: #47091f;
 
-  /* Success: أخضر زمردي */
-  --color-success-50:  #ecfdf5;
-  --color-success-100: #d1fae5;
-  --color-success-500: #10b981;
-  --color-success-600: #059669;
-  --color-success-700: #047857;
+  /* Success: فيروزي/تركواز */
+  --color-success-50:  #f0fdfa;
+  --color-success-100: #ccfbf1;
+  --color-success-500: #14b8a6;
+  --color-success-600: #0d9488;
+  --color-success-700: #0f766e;
 
   /* Warning: برتقالي دافئ */
   --color-warning-50:  #fffbeb;
@@ -78,7 +79,7 @@
   --shadow-md:  0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
   --shadow-lg:  0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
   --shadow-xl:  0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08);
-  --shadow-glow:  0 0 20px rgb(59 130 246 / 0.15);
+  --shadow-glow:  0 0 20px rgb(200 30 92 / 0.15);
 
   /* Radius */
   --radius-sm:  6px;
@@ -108,6 +109,88 @@
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
 }
 
+/* ── 1.b متغيرات الألوان — الوضع المظلم (Dark Mode) ──
+   يُفعّل بإضافة class="dark" على <html> أو <body>
+   نفس المتغيرات، نفس أسماء الكلاسات، تنعكس القيم تلقائياً في كل الواجهة
+*/
+.dark {
+  /* Primary: نفس الأزرق لكن أفتح قليلاً ليبرز على الخلفية الداكنة */
+  --color-primary-50:  #2a0f18;
+  --color-primary-100: #3d1522;
+  --color-primary-200: #4d1a2b;
+  --color-primary-300: #6b2138;
+  --color-primary-400: #9a2f4d;
+  --color-primary-500: #ea6f93;
+  --color-primary-600: #c81e5c;
+  --color-primary-700: #a01449;
+  --color-primary-800: #f5a8bc;
+  --color-primary-900: #fce7ec;
+
+  /* Success: فيروزي/تركواز */
+  --color-success-50:  #0b2a28;
+  --color-success-100: #0e3d38;
+  --color-success-500: #2dd4bf;
+  --color-success-600: #14b8a6;
+  --color-success-700: #5eead4;
+
+  /* Warning */
+  --color-warning-50:  #3a2a0d;
+  --color-warning-100: #4a3410;
+  --color-warning-500: #fbbf24;
+  --color-warning-600: #f59e0b;
+
+  /* Danger */
+  --color-danger-50:  #3a1414;
+  --color-danger-100: #4a1a1a;
+  --color-danger-500: #f87171;
+  --color-danger-600: #ef4444;
+  --color-danger-700: #fca5a5;
+
+  /* Neutral: معكوسة تقريباً */
+  --color-gray-0:   #0f0f11;
+  --color-gray-50:  #16161a;
+  --color-gray-100: #1c1c21;
+  --color-gray-200: #26262d;
+  --color-gray-300: #34343d;
+  --color-gray-400: #4a4a56;
+  --color-gray-500: #6b6b78;
+  --color-gray-600: #9494a1;
+  --color-gray-700: #b5b5c0;
+  --color-gray-800: #d9d9e0;
+  --color-gray-900: #f5f5f7;
+
+  /* Background */
+  --bg-body:        #0f0f11;
+  --bg-card:        #17171b;
+  --bg-sidebar:     #17171b;
+  --bg-hover:       #202027;
+  --bg-active:      #2a2a33;
+
+  /* Text */
+  --text-primary:   #f1f1f4;
+  --text-secondary: #a3a3af;
+  --text-muted:     #6f6f7c;
+  --text-inverse:   #0f0f11;
+
+  /* Border */
+  --border-light:   #26262e;
+  --border-medium:  #34343f;
+  --border-focus:   #60a5fa;
+
+  /* Shadow — أعمق وأنعم على الخلفية الداكنة */
+  --shadow-xs:  0 1px 2px 0 rgb(0 0 0 / 0.30);
+  --shadow-sm:  0 1px 3px 0 rgb(0 0 0 / 0.40), 0 1px 2px -1px rgb(0 0 0 / 0.40);
+  --shadow-md:  0 4px 6px -1px rgb(0 0 0 / 0.45), 0 2px 4px -2px rgb(0 0 0 / 0.45);
+  --shadow-lg:  0 10px 15px -3px rgb(0 0 0 / 0.50), 0 4px 6px -4px rgb(0 0 0 / 0.50);
+  --shadow-xl:  0 20px 25px -5px rgb(0 0 0 / 0.55), 0 8px 10px -6px rgb(0 0 0 / 0.55);
+  --shadow-glow:  0 0 24px rgb(234 111 147 / 0.25);
+}
+
+/* انتقال ناعم عند تبديل الوضع */
+html {
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
 /* ── 2. Reset & Base ── */
 @layer base {
   * {
@@ -127,6 +210,7 @@
     color: var(--text-primary);
     line-height: 1.6;
     overflow-x: hidden;
+    transition: background-color var(--transition-normal), color var(--transition-normal);
   }
 
   /* Scrollbar مخصص — مريح للعين */
@@ -248,8 +332,8 @@
   }
 
   @keyframes glow-pulse {
-    0%, 100% { box-shadow: 0 0 5px rgb(59 130 246 / 0.2); }
-    50%      { box-shadow: 0 0 20px rgb(59 130 246 / 0.4); }
+    0%, 100% { box-shadow: 0 0 5px rgb(200 30 92 / 0.2); }
+    50%      { box-shadow: 0 0 20px rgb(200 30 92 / 0.4); }
   }
 }
 
@@ -281,6 +365,10 @@
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
   }
+  .dark .animate-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    background-size: 200% 100%;
+  }
   .animate-spin-slow {
     animation: spin-slow 2s linear infinite;
   }
@@ -307,12 +395,13 @@
 
 /* ── 5. Components — أنماط مشتركة ── */
 @layer components {
-  /* Card: بطاقة بيضاء بظل خفيف */
+  /* Card: بطاقة بيضاء بظل خفيف (تتحول تلقائياً للوضع المظلم عبر bg-card) */
   .yc-card {
-    @apply rounded-xl border bg-white p-5;
+    @apply rounded-xl border p-5;
+    background: var(--bg-card);
     border-color: var(--border-light);
     box-shadow: var(--shadow-sm);
-    transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+    transition: box-shadow var(--transition-fast), transform var(--transition-fast), background-color var(--transition-normal);
   }
   .yc-card:hover {
     box-shadow: var(--shadow-md);
@@ -320,19 +409,26 @@
 
   /* Button Primary */
   .yc-btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold;
+    color: var(--text-inverse);
     background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700));
-    box-shadow: 0 2px 8px rgb(37 99 235 / 0.25);
+    box-shadow: 0 2px 8px rgb(160 20 73 / 0.25);
     transition: all var(--transition-fast);
+  }
+  .dark .yc-btn-primary {
+    color: var(--color-gray-0);
   }
   .yc-btn-primary:hover {
     background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-800));
-    box-shadow: 0 4px 14px rgb(37 99 235 / 0.35);
+    box-shadow: 0 4px 14px rgb(160 20 73 / 0.35);
     transform: translateY(-1px);
+  }
+  .dark .yc-btn-primary:hover {
+    box-shadow: 0 4px 16px rgb(234 111 147 / 0.30);
   }
   .yc-btn-primary:active {
     transform: translateY(0) scale(0.98);
-    box-shadow: 0 1px 4px rgb(37 99 235 / 0.2);
+    box-shadow: 0 1px 4px rgb(160 20 73 / 0.2);
   }
   .yc-btn-primary:disabled {
     opacity: 0.5;
@@ -360,10 +456,14 @@
 
   /* Button Danger */
   .yc-btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold;
+    color: var(--text-inverse);
     background: linear-gradient(135deg, var(--color-danger-500), var(--color-danger-600));
     box-shadow: 0 2px 8px rgb(239 68 68 / 0.25);
     transition: all var(--transition-fast);
+  }
+  .dark .yc-btn-danger {
+    color: var(--color-gray-0);
   }
   .yc-btn-danger:hover {
     background: linear-gradient(135deg, var(--color-danger-600), var(--color-danger-700));
@@ -376,14 +476,18 @@
 
   /* Button Success */
   .yc-btn-success {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold;
+    color: var(--text-inverse);
     background: linear-gradient(135deg, var(--color-success-500), var(--color-success-600));
-    box-shadow: 0 2px 8px rgb(16 185 129 / 0.25);
+    box-shadow: 0 2px 8px rgb(20 184 166 / 0.25);
     transition: all var(--transition-fast);
+  }
+  .dark .yc-btn-success {
+    color: var(--color-gray-0);
   }
   .yc-btn-success:hover {
     background: linear-gradient(135deg, var(--color-success-600), var(--color-success-700));
-    box-shadow: 0 4px 14px rgb(16 185 129 / 0.35);
+    box-shadow: 0 4px 14px rgb(20 184 166 / 0.35);
     transform: translateY(-1px);
   }
 
@@ -402,7 +506,10 @@
   .yc-input:focus {
     border-color: var(--border-focus);
     background: var(--color-gray-0);
-    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1), var(--shadow-sm);
+    box-shadow: 0 0 0 3px rgb(200 30 92 / 0.1), var(--shadow-sm);
+  }
+  .dark .yc-input:focus {
+    box-shadow: 0 0 0 3px rgb(234 111 147 / 0.18), var(--shadow-sm);
   }
   .yc-input::placeholder {
     color: var(--text-muted);
@@ -461,14 +568,29 @@
   }
   .yc-sidebar-item.active {
     background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700));
-    color: white;
-    box-shadow: 0 2px 8px rgb(37 99 235 / 0.25);
+    color: var(--text-inverse);
+    box-shadow: 0 2px 8px rgb(160 20 73 / 0.25);
+  }
+  .dark .yc-sidebar-item.active {
+    color: var(--color-gray-0);
   }
 
   /* Divider */
   .yc-divider {
     @apply my-4 h-px w-full;
     background: linear-gradient(90deg, transparent, var(--border-light), transparent);
+  }
+
+  /* Theme Toggle Button — زر تبديل الوضع (اختياري لاستخدامه في الواجهة) */
+  .yc-theme-toggle {
+    @apply inline-flex items-center justify-center rounded-full p-2 transition-all;
+    color: var(--text-secondary);
+    background: var(--bg-hover);
+  }
+  .yc-theme-toggle:hover {
+    background: var(--bg-active);
+    color: var(--text-primary);
+    transform: rotate(15deg);
   }
 }
 
@@ -492,6 +614,12 @@
     color: black !important;
   }
 }
+
+/* ── 8. دعم تفضيل النظام تلقائياً (اختياري) ──
+   إذا رغبت أن يعتمد الوضع المظلم تلقائياً على إعداد نظام المستخدم
+   عند عدم وجود اختيار يدوي، أضف class "dark" ديناميكياً عبر JS بناءً على:
+   window.matchMedia('(prefers-color-scheme: dark)').matches
+*/
 
 @keyframes toast-progress {
   from { width: 100%; }

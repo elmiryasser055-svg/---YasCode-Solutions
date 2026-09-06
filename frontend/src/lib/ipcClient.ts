@@ -23,6 +23,11 @@ export interface AppApi {
     login: (input: { username: string; password: string }) => Promise<IpcResult<{ token: string; userId: number; role: "owner" | "cashier" }>>;
     logout: () => Promise<IpcResult<{ success: true }>>;
     createUser: (input: unknown) => Promise<IpcResult<unknown>>;
+        updateCredentials: (input: { 
+      currentPassword: string; 
+      newUsername?: string; 
+      newPassword?: string; 
+    }) => Promise<IpcResult<{ success: true }>>;
   };
   products: {
     create: (input: unknown) => Promise<IpcResult<unknown>>;
@@ -110,6 +115,7 @@ export interface AppApi {
     getOpenSession: () => Promise<IpcResult<Record<string, unknown> | undefined>>;
     getSessionSummary: (sessionId: number) => Promise<IpcResult<Record<string, unknown>>>;
   };
+  
   reports: {
     getProfitTrend: (input: {
       period: "daily" | "weekly" | "monthly";
@@ -117,6 +123,23 @@ export interface AppApi {
     getTodaySummary: () => Promise<
       IpcResult<{ revenue: number; cost: number; profit: number; salesCount: number }>
     >;
+    // ⭐ إضافة التقارير الجديدة
+    getBestSellers: (input: { days: number; limit: number }) => Promise<IpcResult<Array<{
+      productId: number | null;
+      name: string;
+      barcode: string | null;
+      totalQuantitySold: number;
+      totalRevenue: number;
+      currentStock: number;
+    }>>>;
+    getDeadStock: (input: { days: number; limit: number }) => Promise<IpcResult<Array<{
+      productId: number;
+      name: string;
+      barcode: string | null;
+      currentStock: number;
+      totalSoldInPeriod: number;
+      frozenCapital: number;
+    }>>>;
   };
   printing: {
     printSaleTicket: (input: { saleId: number }) => Promise<IpcResult<{ success: true }>>;
@@ -129,6 +152,8 @@ export interface AppApi {
     get: (input: { key: string }) => Promise<IpcResult<string>>;
     getAll: () => Promise<IpcResult<Record<string, string>>>;
     set: (input: { key: string; value: string }) => Promise<IpcResult<{ key: string; value: string }>>;
+        changePassword: (input: { currentPassword: string; newPassword: string }) => Promise<IpcResult<{ success: true }>>;
+
   };
   returns: {
     create: (input: {

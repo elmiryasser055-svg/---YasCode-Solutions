@@ -24,6 +24,7 @@ import {
   Package,
   Weight,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export interface LastSaleItem {
   productId: number;
@@ -40,6 +41,7 @@ interface Props {
 }
 
 export function LastSaleItemsTable({ saleNumber, total, discount, items }: Props) {
+  const { t } = useTranslation();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -50,7 +52,7 @@ export function LastSaleItemsTable({ saleNumber, total, discount, items }: Props
     () => [
       {
         accessorKey: "name",
-        header: "المنتج",
+        header: t("lastSaleTable.product"),
         cell: ({ getValue }) => (
           <span className="font-bold text-[var(--text-primary)]">{getValue() as string}</span>
         ),
@@ -58,7 +60,7 @@ export function LastSaleItemsTable({ saleNumber, total, discount, items }: Props
       },
       {
         accessorKey: "quantity",
-        header: "الكمية",
+        header: t("lastSaleTable.quantity"),
         cell: ({ getValue }) => (
           <span className="inline-flex rounded-md bg-[var(--color-primary-50)] px-2.5 py-1 text-xs font-black text-[var(--color-primary-700)]">
             {getValue() as number}
@@ -68,7 +70,7 @@ export function LastSaleItemsTable({ saleNumber, total, discount, items }: Props
       },
       {
         accessorKey: "unitPrice",
-        header: "سعر الوحدة",
+        header: t("lastSaleTable.unitPrice"),
         cell: ({ getValue }) => (
           <span className="tabular-nums font-semibold text-[var(--text-secondary)]">
             {(getValue() as number).toFixed(2)}
@@ -78,7 +80,7 @@ export function LastSaleItemsTable({ saleNumber, total, discount, items }: Props
       },
       {
         id: "lineTotal",
-        header: "المجموع",
+        header: t("lastSaleTable.total"),
         accessorFn: (row) => row.unitPrice * row.quantity,
         cell: ({ getValue }) => (
           <span className="tabular-nums font-black text-[var(--color-primary-700)]">
@@ -88,7 +90,7 @@ export function LastSaleItemsTable({ saleNumber, total, discount, items }: Props
         sortingFn: "basic",
       },
     ],
-    []
+    [t]
   );
 
   const table = useReactTable({
@@ -119,12 +121,12 @@ export function LastSaleItemsTable({ saleNumber, total, discount, items }: Props
           </div>
           <div>
             <h4 className="text-sm font-bold text-[var(--text-primary)]">
-              تفاصيل الفاتورة: #{saleNumber}
+              {t("lastSaleTable.invoiceDetails")} #{saleNumber}
             </h4>
             <div className="mt-0.5 flex items-center gap-3 text-xs text-[var(--text-muted)]">
-              <span>الإجمالي: <strong className="text-[var(--color-success-700)]">{total.toFixed(2)}</strong></span>
-              {discount > 0 && <span>الخصم: <strong>{discount.toFixed(2)}</strong></span>}
-              <span>{items.length} منتج</span>
+              <span>{t("lastSaleTable.totalLabel")} <strong className="text-[var(--color-success-700)]">{total.toFixed(2)}</strong></span>
+              {discount > 0 && <span>{t("lastSaleTable.discountLabel")} <strong>{discount.toFixed(2)}</strong></span>}
+              <span>{items.length} {t("lastSaleTable.itemsCount")}</span>
             </div>
           </div>
         </div>
@@ -137,7 +139,7 @@ export function LastSaleItemsTable({ saleNumber, total, discount, items }: Props
           }`}
         >
           {isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-          {isVisible ? "إخفاء الجدول" : "إظهار الجدول"}
+          {isVisible ? t("lastSaleTable.hideTable") : t("lastSaleTable.showTable")}
         </button>
       </div>
 
@@ -161,7 +163,7 @@ export function LastSaleItemsTable({ saleNumber, total, discount, items }: Props
                 }`}
               >
                 <Filter className="h-3.5 w-3.5" strokeWidth={2} />
-                فلترة
+                {t("lastSaleTable.filter")}
               </button>
 
               <div className="flex flex-wrap gap-1">
@@ -208,7 +210,7 @@ export function LastSaleItemsTable({ saleNumber, total, discount, items }: Props
                           type="text"
                           value={(header.column.getFilterValue() as string) ?? ""}
                           onChange={(e) => header.column.setFilterValue(e.target.value)}
-                          placeholder="بحث..."
+                          placeholder={t("lastSaleTable.searchPlaceholder")}
                           className="w-32 rounded-md border border-[var(--border-light)] bg-[var(--bg-card)] px-2 py-1 text-xs outline-none focus:border-[var(--color-primary-400)]"
                         />
                       </div>
@@ -218,7 +220,7 @@ export function LastSaleItemsTable({ saleNumber, total, discount, items }: Props
                     onClick={() => table.resetColumnFilters()}
                     className="self-end rounded-md bg-[var(--color-danger-50)] px-2 py-1 text-[10px] font-bold text-[var(--color-danger-600)] hover:bg-[var(--color-danger-100)]"
                   >
-                    مسح
+                    {t("lastSaleTable.clear")}
                   </button>
                 </motion.div>
               )}
@@ -280,22 +282,22 @@ export function LastSaleItemsTable({ saleNumber, total, discount, items }: Props
             {table.getRowModel().rows.length === 0 && (
               <div className="flex flex-col items-center justify-center py-6 text-[var(--text-muted)]">
                 <X className="h-6 w-6 opacity-30" strokeWidth={1.5} />
-                <p className="mt-1 text-xs">لا توجد نتائج</p>
+                <p className="mt-1 text-xs">{t("lastSaleTable.noResults")}</p>
               </div>
             )}
 
             {/* Footer Summary */}
             <div className="flex items-center justify-between border-t border-[var(--border-light)] bg-[var(--bg-hover)] px-4 py-2.5 text-xs">
               <span className="text-[var(--text-muted)]">
-                المجموع الفرعي: <strong className="text-[var(--text-primary)]">{subtotal.toFixed(2)}</strong>
+                {t("lastSaleTable.subtotal")} <strong className="text-[var(--text-primary)]">{subtotal.toFixed(2)}</strong>
               </span>
               {discount > 0 && (
                 <span className="text-[var(--text-muted)]">
-                  الخصم: <strong className="text-[var(--color-danger-600)]">{discount.toFixed(2)}</strong>
+                  {t("lastSaleTable.discountLabel")} <strong className="text-[var(--color-danger-600)]">{discount.toFixed(2)}</strong>
                 </span>
               )}
               <span className="text-sm font-black text-[var(--color-primary-700)]">
-                الإجمالي: {total.toFixed(2)}
+                {t("lastSaleTable.totalLabel")} {total.toFixed(2)}
               </span>
             </div>
           </motion.div>

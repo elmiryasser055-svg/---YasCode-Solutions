@@ -6,10 +6,12 @@ import { useIpcQuery } from "../../hooks/useIpcQuery";
 import { useIpcMutation } from "../../hooks/useIpcMutation";
 import { ProductForm } from "./ProductForm";
 import { confirm } from "../../store/confirmStore";
+import { useTranslation } from "react-i18next";
 
 const PAGE_SIZE = 20;
 
 export function ProductsScreen() {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
@@ -19,7 +21,6 @@ export function ProductsScreen() {
   const [csvStatus, setCsvStatus] = useState<string | null>(null);
 
   const products = useIpcQuery(
-    // الباك إند يتطلب حرف واحد على الأقل للبحث
     () => api().products.search({ query: query || "a", page, pageSize: PAGE_SIZE }),
     [query, page]
   );
@@ -29,26 +30,27 @@ export function ProductsScreen() {
   });
 
   async function handleExportCsv() {
-    setCsvStatus("جاري التصدير...");
+    setCsvStatus(t("productsScreen.exporting"));
     const result = await api().products.exportCsv();
-    if (!result.ok) return setCsvStatus(`فشل التصدير: ${result.error}`);
+    if (!result.ok) return setCsvStatus(t("productsScreen.exportFailed", { error: result.error }));
     setCsvStatus(
       result.data.success
-        ? `✅ تم تصدير ${result.data.count} منتج بنجاح`
-        : "تم إلغاء التصدير."
+        ? t("productsScreen.exportSuccess", { count: result.data.count })
+        : t("productsScreen.exportCanceled")
     );
   }
 
   async function handleImportCsv() {
-    setCsvStatus("جاري الاستيراد...");
+    setCsvStatus(t("productsScreen.importing"));
     const result = await api().products.importCsv();
-    if (!result.ok) return setCsvStatus(`فشل الاستيراد: ${result.error}`);
-    if ("canceled" in result.data) return setCsvStatus("تم إلغاء الاستيراد.");
+    if (!result.ok) return setCsvStatus(t("productsScreen.importFailed", { error: result.error }));
+    if ("canceled" in result.data) return setCsvStatus(t("productsScreen.importCanceled"));
     
     const { created, skipped, errors } = result.data;
     setCsvStatus(
-      `✅ تم إنشاء ${created} منتج، تخطّي ${skipped}` +
-        (errors.length > 0 ? ` — أول خطأ: سطر ${errors[0].line}` : "")
+      errors.length > 0
+        ? t("productsScreen.importSuccessWithErrors", { created, skipped, line: errors[0].line })
+        : t("productsScreen.importSuccess", { created, skipped })
     );
     products.refetch();
   }
@@ -58,19 +60,19 @@ export function ProductsScreen() {
   }
 
   async function handlePrintLabel(productId: number) {
-    setLabelStatus("جاري الطباعة...");
+    setLabelStatus(t("productsScreen.printing"));
     const copies = getCopiesFor(productId);
     const result = await api().printing.printBarcodeLabel({ productId, copies });
     setLabelStatus(
       result.ok
-        ? `✅ تمت طباعة ${result.data.copiesPrinted} ملصق (${result.data.barcode})`
-        : `❌ فشل: ${result.error}`
+        ? t("productsScreen.printSuccess", { copies: result.data.copiesPrinted, barcode: result.data.barcode })
+        : t("productsScreen.printFailed", { error: result.error })
     );
   }
 
   async function handleDeactivate(productId: number, productName: string) {
     const confirmed = await confirm(
-      `هل أنت متأكد من تعطيل المنتج "${productName}"؟ لن يظهر بعد الآن في البحث أو البيع.`
+      t("productsScreen.deactivateConfirm", { name: productName })
     );
     if (confirmed) deactivateProduct.mutate({ id: productId });
   }
@@ -91,22 +93,22 @@ export function ProductsScreen() {
           animate={{ opacity: 1, y: 0 }} 
           className="mb-6 flex items-center justify-between"
         >
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">إدارة المنتجات</h1>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">{t("productsScreen.title")}</h1>
           <div className="flex gap-2">
             <button onClick={handleImportCsv} className="yc-btn-secondary">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-              استيراد
+              {t("productsScreen.import")}
             </button>
             <button onClick={handleExportCsv} className="yc-btn-secondary">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-              تصدير
+              {t("productsScreen.export")}
             </button>
             <button
               onClick={() => { setShowNewForm(true); setEditingProduct(null); }}
               className="yc-btn-primary"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-              منتج جديد
+              {t("productsScreen.addNew")}
             </button>
           </div>
         </motion.div>
@@ -132,7 +134,7 @@ export function ProductsScreen() {
           </span>
           <input
             className="yc-input pl-10"
-            placeholder="ابحث بالاسم أو الباركود..."
+            placeholder={t("productsScreen.searchPlaceholder")}
             value={query}
             onChange={(e) => handleSearchChange(e.target.value)}
             data-barcode-ignore="true"
@@ -152,11 +154,11 @@ export function ProductsScreen() {
               <table className="yc-table">
                 <thead>
                   <tr>
-                    <th>الاسم</th>
-                    <th>الباركود</th>
-                    <th>سعر البيع</th>
-                    <th>الكمية</th>
-                    <th className="text-left">إجراءات</th>
+                    <th>{t("productsScreen.name")}</th>
+                    <th>{t("productsScreen.barcode")}</th>
+                    <th>{t("productsScreen.sellingPrice")}</th>
+                    <th>{t("productsScreen.quantity")}</th>
+                    <th className="text-left">{t("productsScreen.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -172,7 +174,7 @@ export function ProductsScreen() {
                       >
                         <td className="font-medium text-[var(--text-primary)]">{p.name}</td>
                         <td className="text-[var(--text-secondary)]">{p.barcode ?? "—"}</td>
-                        <td className="font-semibold">{p.sellingPrice} د.أ</td>
+                        <td className="font-semibold">{p.sellingPrice} {t("common.currency")}</td>
                         <td>
                           <span className={`yc-badge ${p.currentQuantity <= p.lowStockThreshold ? "yc-badge-red" : "yc-badge-green"}`}>
                             {p.currentQuantity}
@@ -184,7 +186,7 @@ export function ProductsScreen() {
                               onClick={() => { setEditingProduct(p); setShowNewForm(false); }}
                               className="yc-btn-secondary !py-1.5 !px-3 text-xs"
                             >
-                              تعديل
+                              {t("common.edit")}
                             </button>
 
                             <div className="flex items-center gap-1 bg-[var(--color-gray-100)] rounded-md p-1">
@@ -196,9 +198,9 @@ export function ProductsScreen() {
                                 value={getCopiesFor(p.id)}
                                 onChange={(e) => setLabelCopies((prev) => ({ ...prev, [p.id]: Number(e.target.value) || 1 }))}
                                 data-barcode-ignore="true"
-                                title="عدد النسخ"
+                                title={t("productsScreen.copiesCount")}
                               />
-                              <button onClick={() => handlePrintLabel(p.id)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 transition-colors" title="طباعة ملصق">
+                              <button onClick={() => handlePrintLabel(p.id)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 transition-colors" title={t("productsScreen.printLabel")}>
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                               </button>
                             </div>
@@ -206,7 +208,7 @@ export function ProductsScreen() {
                             <button
                               onClick={() => handleDeactivate(p.id, p.name)}
                               className="text-[var(--color-danger-600)] hover:bg-[var(--color-danger-50)] p-1.5 rounded-md transition-colors"
-                              title="تعطيل"
+                              title={t("productsScreen.deactivate")}
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                             </button>
@@ -219,7 +221,7 @@ export function ProductsScreen() {
                   {!products.isLoading && (products.data?.items.length ?? 0) === 0 && (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-[var(--text-muted)]">
-                        لا توجد نتائج مطابقة
+                        {t("productsScreen.noResults")}
                       </td>
                     </tr>
                   )}
@@ -233,7 +235,7 @@ export function ProductsScreen() {
         {products.data && products.data.total > 0 && (
           <div className="mt-4 flex items-center justify-between text-sm text-[var(--text-secondary)]">
             <span>
-              صفحة <span className="font-bold text-[var(--text-primary)]">{products.data.page}</span> من {totalPages} — {products.data.total} نتيجة
+              {t("productsScreen.paginationInfo", { page: products.data.page, totalPages, total: products.data.total })}
             </span>
             <div className="flex gap-2">
               <button
@@ -241,14 +243,14 @@ export function ProductsScreen() {
                 disabled={page <= 1}
                 className="yc-btn-secondary !py-1.5 !px-3 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                السابق
+                {t("productsScreen.previous")}
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
                 className="yc-btn-secondary !py-1.5 !px-3 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                التالي
+                {t("productsScreen.next")}
               </button>
             </div>
           </div>

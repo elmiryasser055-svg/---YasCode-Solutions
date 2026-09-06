@@ -1,11 +1,11 @@
 // src/components/layout/ConfirmDialogHost.tsx
-// نفس الـlogic والـAPI بالضبط — تحديث UI فقط ليطابق global.css
-
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useConfirmStore, resolveConfirm } from "../../store/confirmStore";
 import { AlertTriangle, HelpCircle } from "lucide-react";
 
 export function ConfirmDialogHost() {
+  const { t } = useTranslation();
   const { isOpen, message, danger } = useConfirmStore();
   const cancelBtnRef = useRef<HTMLButtonElement>(null);
   const confirmBtnRef = useRef<HTMLButtonElement>(null);
@@ -19,7 +19,6 @@ export function ConfirmDialogHost() {
     }
 
     document.addEventListener("keydown", handleKeyDown);
-    // فوكس افتراضي على "إلغاء" للعمليات الخطيرة — أمان إضافي ضد ضغط عرضي
     const timer = setTimeout(() => {
       (danger ? cancelBtnRef : confirmBtnRef).current?.focus();
     }, 50);
@@ -85,14 +84,14 @@ export function ConfirmDialogHost() {
             onClick={() => resolveConfirm(false)}
             className="yc-btn-secondary flex-1"
           >
-            إلغاء
+            {t("confirm.cancel")}
           </button>
           <button
             ref={confirmBtnRef}
             onClick={() => resolveConfirm(true)}
             className={danger ? "yc-btn-danger flex-1" : "yc-btn-primary flex-1"}
           >
-            تأكيد
+            {t("confirm.confirm")}
           </button>
         </div>
       </div>

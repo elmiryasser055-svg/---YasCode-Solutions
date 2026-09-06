@@ -1,6 +1,7 @@
 // src/App.tsx
 import { useEffect, useState, useRef } from "react";
 import { Toaster } from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 import {
   ShoppingCart,
@@ -52,40 +53,12 @@ const SCREENS: Record<Screen, React.ComponentType> = {
   products: ProductsScreen,
   categories: CategoriesScreen,
   suppliers: SuppliersScreen,
-  purchases: () => null, // placeholder — will be implemented
+  purchases: () => null,
   cashRegister: CashRegisterScreen,
   reports: ReportsScreen,
   users: UsersScreen,
   settings: SettingsScreen,
   backup: BackupScreen,
-};
-
-const SCREEN_TITLES: Record<Screen, string> = {
-  pos: "نقطة البيع",
-  inventory: "المخزون",
-  products: "المنتجات",
-  categories: "الفئات",
-  suppliers: "الموردون",
-  purchases: "المشتريات",
-  cashRegister: "الصندوق",
-  reports: "التقارير",
-  users: "الموظفون",
-  settings: "الإعدادات",
-  backup: "النسخ الاحتياطي",
-};
-
-const SCREEN_SUBTITLES: Record<Screen, string> = {
-  pos: "إدارة عمليات البيع اليومية",
-  inventory: "متابعة الكميات والحركات",
-  products: "إدارة قائمة المنتجات",
-  categories: "تنظيم فئات المنتجات",
-  suppliers: "إدارة الموردين والمشتريات",
-  purchases: "طلبات وفواتير الشراء",
-  cashRegister: "فتح وإغلاق الصندوق",
-  reports: "تقارير المبيعات والأداء",
-  users: "إدارة حسابات الموظفين",
-  settings: "إعدادات النظام العامة",
-  backup: "نسخ احتياطي واستعادة البيانات",
 };
 
 const SCREEN_ICONS: Record<Screen, React.ComponentType<{ className?: string }>> = {
@@ -103,6 +76,7 @@ const SCREEN_ICONS: Record<Screen, React.ComponentType<{ className?: string }>> 
 };
 
 function LiveClock() {
+  const { i18n } = useTranslation();
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -113,16 +87,17 @@ function LiveClock() {
   return (
     <div className="hidden flex-col items-end leading-tight sm:flex">
       <span className="text-sm font-semibold text-[var(--text-primary)]">
-        {now.toLocaleTimeString("ar-DZ", { hour: "2-digit", minute: "2-digit" })}
+        {now.toLocaleTimeString(i18n.language, { hour: "2-digit", minute: "2-digit" })}
       </span>
       <span className="text-xs text-[var(--text-muted)]">
-        {now.toLocaleDateString("ar-DZ", { weekday: "long", day: "numeric", month: "long" })}
+        {now.toLocaleDateString(i18n.language, { weekday: "long", day: "numeric", month: "long" })}
       </span>
     </div>
   );
 }
 
 export default function App() {
+  const { t } = useTranslation();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const refreshCashRegister = useCashRegisterStore((s) => s.refresh);
   const [activeScreen, setActiveScreen] = useState<Screen>("pos");
@@ -149,13 +124,12 @@ export default function App() {
     <div className="flex h-screen bg-[var(--bg-body)]">
       <ConfirmDialogHost />
       <Toaster
-    position="top-center"
-    gutter={12}
-    toastOptions={{
-      // مهم: نفرّغ الستايل الافتراضي لأن renderToast يتولى كل التصميم بنفسه
-      style: { background: "transparent", boxShadow: "none", padding: 0 },
-    }}
-  />
+        position="top-center"
+        gutter={12}
+        toastOptions={{
+          style: { background: "transparent", boxShadow: "none", padding: 0 },
+        }}
+      />
       <Sidebar active={activeScreen} onNavigate={handleNavigate} />
 
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -173,16 +147,16 @@ export default function App() {
             </div>
             <div className="flex flex-col">
               <h2 className="text-base font-bold leading-tight text-[var(--text-primary)]">
-                {SCREEN_TITLES[activeScreen]}
+                {t(`app.screen.${activeScreen}`)}
               </h2>
               <p className="text-xs text-[var(--text-muted)]">
-                {SCREEN_SUBTITLES[activeScreen]}
+                {t(`app.subtitle.${activeScreen}`)}
               </p>
             </div>
             {activeScreen === "pos" && (
               <span className="yc-badge yc-badge-green gap-1.5">
                 <Circle className="h-2 w-2 animate-pulse-soft fill-current" />
-                جلسة نشطة
+                {t("app.activeSession")}
               </span>
             )}
           </div>

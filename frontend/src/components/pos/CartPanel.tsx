@@ -36,7 +36,6 @@ export const CartPanel = memo(function CartPanel({
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--border-light)] bg-[var(--bg-card)] shadow-[var(--shadow-sm)]">
-      {/* Header - ⭐ أضفنا flex-shrink-0 حتى لا يتغير ارتفاعه */}
       <div className="flex-shrink-0 bg-gradient-to-br from-[var(--color-primary-600)] to-[var(--color-primary-700)] p-4 text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -46,12 +45,12 @@ export const CartPanel = memo(function CartPanel({
             <div>
               <h2 className="text-lg font-bold">{t("pos.cart")}</h2>
               <p className="text-xs text-white/80">
-                {items.length} {items.length === 1 ? "منتج" : "منتجات"}
+                {items.length} {items.length === 1 ? t("pos.product_one") : t("pos.product_other")}
               </p>
             </div>
           </div>
           <div className="text-left">
-            <p className="text-xs text-white/70">الإجمالي</p>
+            <p className="text-xs text-white/70">{t("pos.total")}</p>
             <motion.p
               key={total.toFixed(2)}
               initial={{ scale: 1.2, opacity: 0 }}
@@ -64,7 +63,6 @@ export const CartPanel = memo(function CartPanel({
         </div>
       </div>
 
-      {/* Items List - ⭐ تأخذ كل المساحة المتبقية وتتمرر */}
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         <AnimatePresence mode="popLayout" initial={false}>
           {items.length === 0 ? (
@@ -76,8 +74,8 @@ export const CartPanel = memo(function CartPanel({
               <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--bg-hover)]">
                 <ShoppingCart className="h-10 w-10 opacity-40" strokeWidth={1.5} />
               </div>
-              <p className="text-sm font-medium">السلة فارغة</p>
-              <p className="text-xs">امسح الباركود أو اختر منتجًا سريعًا</p>
+              <p className="text-sm font-medium">{t("pos.cartEmpty")}</p>
+              <p className="text-xs">{t("pos.scanOrSelect")}</p>
             </motion.div>
           ) : (
             items.map((item) => {
@@ -92,7 +90,6 @@ export const CartPanel = memo(function CartPanel({
                   transition={{ type: "spring", stiffness: 500, damping: 35 }}
                   className="mb-2 overflow-hidden rounded-xl border border-[var(--border-light)] bg-[var(--bg-card)] shadow-sm transition-colors hover:border-[var(--color-primary-200)]"
                 >
-                  {/* القسم العلوي: معلومات المنتج */}
                   <div className="flex items-start justify-between gap-2 p-2.5 pb-2">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[15px] font-bold text-[var(--text-primary)]">
@@ -105,9 +102,9 @@ export const CartPanel = memo(function CartPanel({
                           ) : (
                             <Package className="h-3 w-3" />
                           )}
-                          {item.unitType === "weight" ? "وزن" : "قطعة"}
+                          {item.unitType === "weight" ? t("pos.weight") : t("pos.piece")}
                         </span>
-                        <span className="tabular-nums">{item.sellingPrice.toFixed(2)} د.ج / وحدة</span>
+                        <span className="tabular-nums">{item.sellingPrice.toFixed(2)} {t("pos.pricePerUnit")}</span>
                       </div>
                     </div>
                     <button
@@ -118,9 +115,7 @@ export const CartPanel = memo(function CartPanel({
                     </button>
                   </div>
 
-                  {/* القسم السفلي: الكمية والإجمالي */}
                   <div className="flex items-center justify-between border-t border-dashed border-[var(--border-light)] bg-[var(--bg-hover)] px-2.5 py-1.5">
-                    {/* Quantity Controls */}
                     <div className="flex items-center gap-1.5">
                       <motion.button
                         whileTap={{ scale: 0.9 }}
@@ -149,9 +144,8 @@ export const CartPanel = memo(function CartPanel({
                       </motion.button>
                     </div>
 
-                    {/* Line Total */}
                     <div className="flex flex-col items-end">
-                      <span className="text-[10px] font-medium text-[var(--text-muted)]">الإجمالي</span>
+                      <span className="text-[10px] font-medium text-[var(--text-muted)]">{t("pos.lineTotal")}</span>
                       <motion.p
                         key={lineTotal.toFixed(2)}
                         initial={{ scale: 1.1, opacity: 0.5 }}
@@ -169,7 +163,6 @@ export const CartPanel = memo(function CartPanel({
         </AnimatePresence>
       </div>
 
-      {/* Summary - ⭐ أضفنا flex-shrink-0 حتى لا يختفي أو يضغط */}
       <div className="flex-shrink-0 border-t border-[var(--border-light)] bg-[var(--bg-hover)] p-3">
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
@@ -193,7 +186,7 @@ export const CartPanel = memo(function CartPanel({
                 onClick={() => onSetDiscount(0)}
                 className="rounded-lg px-2 py-1 text-xs text-[var(--text-muted)] hover:bg-[var(--bg-card)] hover:text-[var(--color-danger-500)]"
               >
-                إلغاء
+                {t("pos.cancel")}
               </button>
             </div>
           </div>

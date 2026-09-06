@@ -27,7 +27,7 @@ export function InventoryScreen() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>("lowStock");
   const [selectedProduct, setSelectedProduct] = useState<ProductRow | null>(null);
-  const [searchQuery, setSearchQuery] = useState(""); // حالة البحث المحلي
+  const [searchQuery, setSearchQuery] = useState("");
 
   const lowStock = useIpcQuery(() => api().inventory.getLowStock());
   const expiringSoon = useIpcQuery(() => api().inventory.getExpiringProducts({ withinDays: 30 }));
@@ -36,7 +36,6 @@ export function InventoryScreen() {
   const activeQuery = { lowStock, expiringSoon, expired }[activeTab];
   const allRows = (activeQuery.data ?? []) as unknown as ProductRow[];
   
-  // فلترة محلية بناءً على البحث
   const filteredRows = allRows.filter((row) =>
     row.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -54,17 +53,23 @@ export function InventoryScreen() {
     { id: "expired" as Tab, label: t("inventory.expired"), count: expired.data?.length ?? 0 },
   ];
 
-  // دالة تصدير القائمة المعروضة حاليًا (بعد الفلترة) إلى CSV
   function handleExportCurrentView() {
     if (filteredRows.length === 0) return;
     
-    const headers = ["ID", "الاسم", "الكمية الحالية", "حد التنبيه", "تاريخ الصلاحية"];
+    const headers = [
+      t("inventory.csvId"), 
+      t("inventory.csvName"), 
+      t("inventory.csvCurrentQuantity"), 
+      t("inventory.csvThreshold"), 
+      t("inventory.csvExpiryDate")
+    ];
+    
     const rows = filteredRows.map((p) => [
       p.id,
-      `"${p.name}"`, // تهريب الأسماء التي تحتوي على فواصل
+      `"${p.name}"`,
       p.currentQuantity,
       p.lowStockThreshold,
-      p.expiryDate || "بدون"
+      p.expiryDate || t("inventory.csvNoDate")
     ]);
 
     const csvContent = [
@@ -72,7 +77,7 @@ export function InventoryScreen() {
       ...rows.map((row) => row.join(","))
     ].join("\n");
 
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" }); // \uFEFF لدعم العربية في Excel
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -131,7 +136,7 @@ export function InventoryScreen() {
             </span>
             <input
               type="text"
-              placeholder="ابحث في القائمة بالاسم..."
+              placeholder={t("inventory.searchPlaceholder")}
               className="yc-input pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -143,7 +148,7 @@ export function InventoryScreen() {
             disabled={filteredRows.length === 0}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-            تصدير القائمة
+            {t("inventory.exportList")}
           </button>
         </div>
 
@@ -160,10 +165,10 @@ export function InventoryScreen() {
               <table className="yc-table">
                 <thead>
                   <tr>
-                    <th>الاسم</th>
+                    <th>{t("inventory.name")}</th>
                     <th>{t("inventory.currentQuantity")}</th>
-                    {activeTab !== "lowStock" && <th>تاريخ الصلاحية</th>}
-                    <th className="text-left">إجراء</th>
+                    {activeTab !== "lowStock" && <th>{t("inventory.expiryDate")}</th>}
+                    <th className="text-left">{t("inventory.action")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -197,7 +202,7 @@ export function InventoryScreen() {
                             onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); }}
                             className="yc-btn-secondary !py-1.5 !px-3 text-xs"
                           >
-                            تعديل الكمية
+                            {t("inventory.editQuantity")}
                           </button>
                         </td>
                       </motion.tr>
@@ -209,7 +214,7 @@ export function InventoryScreen() {
                       <td colSpan={4} className="p-8 text-center text-[var(--text-muted)]">
                         <div className="flex flex-col items-center gap-2 animate-fade-in">
                           <svg className="w-12 h-12 text-[var(--color-gray-300)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-                          {searchQuery ? "لا توجد نتائج مطابقة لبحثك" : "لا توجد عناصر حاليًا"}
+                          {searchQuery ? t("inventory.noSearchResults") : t("inventory.emptyState")}
                         </div>
                       </td>
                     </tr>

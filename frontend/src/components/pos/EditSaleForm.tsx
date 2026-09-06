@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../lib/ipcClient";
 import { useIpcMutation } from "../../hooks/useIpcMutation";
 import { Plus, Trash2, Loader2, TriangleAlert, CircleAlert, PackageOpen } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export interface EditableSaleItem {
   productId: number;
@@ -12,8 +13,6 @@ export interface EditableSaleItem {
   unitPrice: number;
 }
 
-// ⭐ ما يُرسَل إلى onDone بعد نجاح التعديل، حتى يقدر الأب (SaleScreen) يحدّث
-// الفاتورة في مكانها داخل recentSales بدل حذفها.
 export interface UpdatedSaleResult {
   id: number;
   saleNumber: string;
@@ -31,21 +30,17 @@ interface Props {
   onCancel: () => void;
 }
 
-// هذا المكوّن يُعرض داخل <Modal> (انظر SaleScreen.tsx)، لذلك لا يحرّك ارتفاعه
-// الخاص ولا يعرض عنوانًا مكررًا — النافذة المنبثقة تتكفّل بالعنوان والانيميشن.
 export function EditSaleForm({ saleId, saleNumber, initialItems, initialDiscount, onDone, onCancel }: Props) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<EditableSaleItem[]>(initialItems);
   const [discount, setDiscount] = useState(initialDiscount);
-  const [reason, setReason] = useState("لا يوجد سبب");
+  const [reason, setReason] = useState(t("editSale.noReason"));
   const [addQuery, setAddQuery] = useState("");
 
   const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   const total = subtotal - discount;
   const invalidDiscount = discount > subtotal;
 
-  // ⭐ نبني القيم المحدَّثة من الحالة المحلية (items/discount/total) التي نجح
-  // إرسالها فعليًا، بدل الاعتماد على شكل استجابة الخادم غير المضمون — ونمرّرها
-  // إلى onDone حتى يحدّث الأب الفاتورة في مكانها بدل حذفها من القائمة.
   const editSale = useIpcMutation(api().sales.edit, {
     onSuccess: () =>
       onDone({
@@ -89,7 +84,7 @@ export function EditSaleForm({ saleId, saleNumber, initialItems, initialDiscount
 
   async function handleSubmit() {
     if (items.length === 0 || invalidDiscount) return;
-    const finalReason = reason.trim() === "" ? "لا يوجد سبب" : reason.trim();
+    const finalReason = reason.trim() === "" ? t("editSale.noReason") : reason.trim();
     await editSale.mutate({
       saleId,
       items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
@@ -103,7 +98,7 @@ export function EditSaleForm({ saleId, saleNumber, initialItems, initialDiscount
       <div className="flex gap-2">
         <input
           className="yc-input flex-1"
-          placeholder="أضف منتجًا (اسم أو باركود)..."
+          placeholder={t("editSale.addPlaceholder")}
           value={addQuery}
           onChange={(e) => setAddQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAddProduct()}
@@ -111,7 +106,7 @@ export function EditSaleForm({ saleId, saleNumber, initialItems, initialDiscount
         />
         <button onClick={handleAddProduct} className="yc-btn-secondary !px-3 !py-2 !text-sm">
           <Plus className="h-4 w-4" strokeWidth={2} />
-          إضافة
+          {t("editSale.add")}
         </button>
       </div>
 
@@ -121,7 +116,7 @@ export function EditSaleForm({ saleId, saleNumber, initialItems, initialDiscount
           style={{ background: "var(--bg-hover)", color: "var(--text-muted)" }}
         >
           <PackageOpen className="h-7 w-7" strokeWidth={1.25} />
-          <p className="text-sm">لا توجد منتجات في الفاتورة</p>
+          <p className="text-sm">{t("editSale.noProducts")}</p>
         </div>
       ) : (
         <ul className="space-y-1.5">
@@ -154,7 +149,7 @@ export function EditSaleForm({ saleId, saleNumber, initialItems, initialDiscount
                   onClick={() => removeItem(item.productId)}
                   className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition-colors"
                   style={{ color: "var(--text-muted)" }}
-                  title="حذف المنتج"
+                  title={t("editSale.deleteProduct")}
                 >
                   <Trash2 className="h-3.5 w-3.5" strokeWidth={1.75} />
                 </button>
@@ -166,7 +161,7 @@ export function EditSaleForm({ saleId, saleNumber, initialItems, initialDiscount
 
       <div className="flex items-center justify-between text-sm">
         <label className="flex items-center gap-2 text-[var(--text-secondary)]">
-          الخصم:
+          {t("editSale.discountLabel")}
           <input
             type="number"
             className="w-20 rounded-[var(--radius-sm)] border p-1"
@@ -183,7 +178,7 @@ export function EditSaleForm({ saleId, saleNumber, initialItems, initialDiscount
           className="font-semibold"
           style={{ color: invalidDiscount ? "var(--color-danger-600)" : "var(--text-primary)" }}
         >
-          الإجمالي الجديد: {total.toFixed(2)}
+          {t("editSale.newTotal")} {total.toFixed(2)}
         </span>
       </div>
 
@@ -198,14 +193,14 @@ export function EditSaleForm({ saleId, saleNumber, initialItems, initialDiscount
             style={{ background: "var(--color-danger-50)", color: "var(--color-danger-600)" }}
           >
             <CircleAlert className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
-            <span>الخصم أكبر من إجمالي المنتجات — عدّل القيمة</span>
+            <span>{t("editSale.invalidDiscount")}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
       <input
         className="yc-input"
-        placeholder="سبب التعديل (اختياري)"
+        placeholder={t("editSale.reasonPlaceholder")}
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         data-barcode-ignore="true"
@@ -237,14 +232,14 @@ export function EditSaleForm({ saleId, saleNumber, initialItems, initialDiscount
           {editSale.isLoading ? (
             <>
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              جاري الحفظ...
+              {t("editSale.saving")}
             </>
           ) : (
-            "حفظ التعديل"
+            t("editSale.save")
           )}
         </motion.button>
         <button onClick={onCancel} className="yc-btn-secondary !px-3 !py-1.5 !text-sm">
-          إلغاء
+          {t("pos.cancel")}
         </button>
       </div>
     </div>

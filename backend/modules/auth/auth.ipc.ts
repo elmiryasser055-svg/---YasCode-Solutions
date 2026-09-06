@@ -17,4 +17,7 @@ export function registerAuthIpcHandlers() {
   ipcMain.handle("auth:createUser", (_event, input) =>
     withErrorHandling("auth:createUser", controller.createUserController)(input)
   );
+    ipcMain.handle("auth:updateCredentials", (_event, input) =>
+    withErrorHandling("auth:updateCredentials", controller.updateCredentialsController)(input)
+  );
 }

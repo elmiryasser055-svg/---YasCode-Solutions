@@ -20,7 +20,7 @@ export function CashRegisterScreen() {
   const openSession = useIpcMutation(api().cashRegister.open, { 
     onSuccess: () => {
       refresh();
-      toast.success("تم فتح الصندوق بنجاح");
+      toast.success(t("cashRegister.openSuccess"));
     },
     onError: (err) => toast.error(err),
   });
@@ -29,7 +29,7 @@ export function CashRegisterScreen() {
     onSuccess: (data) => {
       setClosedSummary(data);
       refresh();
-      toast.success("تم إغلاق الصندوق بنجاح");
+      toast.success(t("cashRegister.closeSuccess"));
     },
     onError: (err) => toast.error(err),
   });
@@ -38,7 +38,7 @@ export function CashRegisterScreen() {
     onSuccess: () => {
       setExpenseCategory("");
       setExpenseAmount(0);
-      toast.success("تم تسجيل المصروف بنجاح");
+      toast.success(t("cashRegister.expenseSuccess"));
     },
     onError: (err) => toast.error(err),
   });
@@ -57,7 +57,7 @@ export function CashRegisterScreen() {
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
             </div>
             <h2 className="mb-1 text-xl font-bold text-[var(--text-primary)]">{t("cashRegister.openSession")}</h2>
-            <p className="mb-4 text-sm text-[var(--text-secondary)]">أدخل المبلغ الموجود في الصندوق حالياً لبدء جلسة عمل</p>
+            <p className="mb-4 text-sm text-[var(--text-secondary)]">{t("cashRegister.openSessionDesc")}</p>
             
             <div className="space-y-4 text-start">
               <label className="block">
@@ -106,22 +106,22 @@ export function CashRegisterScreen() {
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-warning-100)] text-[var(--color-warning-600)]">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
           </div>
-          <h2 className="font-bold text-lg text-[var(--text-primary)]">تسجيل مصروف</h2>
+          <h2 className="font-bold text-lg text-[var(--text-primary)]">{t("cashRegister.recordExpense")}</h2>
         </div>
 
         <div className="flex-1 space-y-3">
           <label className="block">
-            <span className="text-sm text-[var(--text-secondary)] mb-1 block">الفئة (كهرباء، نقل، صيانة...)</span>
+            <span className="text-sm text-[var(--text-secondary)] mb-1 block">{t("cashRegister.expenseCategoryLabel")}</span>
             <input
               className="yc-input"
               value={expenseCategory}
               onChange={(e) => setExpenseCategory(e.target.value)}
               data-barcode-ignore="true"
-              placeholder="مثال: فاتورة كهرباء"
+              placeholder={t("cashRegister.expenseCategoryPlaceholder")}
             />
           </label>
           <label className="block">
-            <span className="text-sm text-[var(--text-secondary)] mb-1 block">المبلغ</span>
+            <span className="text-sm text-[var(--text-secondary)] mb-1 block">{t("cashRegister.amount")}</span>
             <input
               type="number"
               className="yc-input"
@@ -142,7 +142,7 @@ export function CashRegisterScreen() {
           {recordExpense.isLoading ? (
             <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mx-auto"></div>
           ) : (
-            "تسجيل المصروف"
+            t("cashRegister.recordExpense")
           )}
         </button>
       </motion.section>
@@ -162,7 +162,7 @@ export function CashRegisterScreen() {
 
         <div className="flex-1 space-y-3">
           <label className="block">
-            <span className="text-sm text-[var(--text-secondary)] mb-1 block">{t("cashRegister.actualAmount")} (بعد العدّ اليدوي)</span>
+            <span className="text-sm text-[var(--text-secondary)] mb-1 block">{t("cashRegister.actualAmount")} {t("cashRegister.afterManualCount")}</span>
             <input
               type="number"
               className="yc-input text-lg font-bold"
@@ -183,15 +183,15 @@ export function CashRegisterScreen() {
               >
                 <div className="flex justify-between">
                   <span className="text-[var(--text-secondary)]">{t("cashRegister.expectedAmount")}:</span>
-                  <span className="font-bold text-[var(--text-primary)]">{String(closedSummary.expectedAmount)} د.أ</span>
+                  <span className="font-bold text-[var(--text-primary)]">{String(closedSummary.expectedAmount)} {t("cashRegister.currency")}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[var(--text-secondary)]">{t("cashRegister.actualAmount")}:</span>
-                  <span className="font-bold text-[var(--text-primary)]">{String(closedSummary.actualAmount)} د.أ</span>
+                  <span className="font-bold text-[var(--text-primary)]">{String(closedSummary.actualAmount)} {t("cashRegister.currency")}</span>
                 </div>
                 <div className="border-t border-[var(--border-light)] mt-2 pt-2 flex justify-between">
                   <span className="text-[var(--text-secondary)]">{t("cashRegister.difference")}:</span>
-                  <span className={`font-bold ${differenceColor}`}>{difference} د.أ</span>
+                  <span className={`font-bold ${differenceColor}`}>{difference} {t("cashRegister.currency")}</span>
                 </div>
               </motion.div>
             )}

@@ -12,8 +12,10 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export function LoginScreen() {
+  const { t } = useTranslation();
   const login = useAuthStore((s) => s.login);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +30,7 @@ export function LoginScreen() {
     try {
       await login(username, password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "خطأ غير متوقع");
+      setError(err instanceof Error ? err.message : t("loginScreen.unexpectedError"));
     } finally {
       setIsLoading(false);
     }
@@ -59,16 +61,16 @@ export function LoginScreen() {
             YasCode Supérette
           </h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            نظام تسيير محلات المواد الغذائية
+            {t("loginScreen.subtitle")}
           </p>
         </div>
 
         {/* Login Card */}
         <div className="yc-card !p-8 animate-fade-in-scale delay-100">
           <div className="mb-6 text-center">
-            <h2 className="text-xl font-bold text-[var(--text-primary)]">تسجيل الدخول</h2>
+            <h2 className="text-xl font-bold text-[var(--text-primary)]">{t("loginScreen.formTitle")}</h2>
             <p className="mt-1 text-xs text-[var(--text-muted)]">
-              أدخل بيانات حسابك للمتابعة
+              {t("loginScreen.formSubtitle")}
             </p>
           </div>
 
@@ -76,7 +78,7 @@ export function LoginScreen() {
             {/* Username */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-[var(--text-primary)]">
-                اسم المستخدم
+                {t("loginScreen.username")}
               </label>
               <div className="relative">
                 <User
@@ -85,7 +87,7 @@ export function LoginScreen() {
                 />
                 <input
                   className="yc-input pr-11"
-                  placeholder="admin"
+                  placeholder={t("loginScreen.usernamePlaceholder")}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoFocus
@@ -96,7 +98,7 @@ export function LoginScreen() {
             {/* Password */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-[var(--text-primary)]">
-                كلمة المرور
+                {t("loginScreen.password")}
               </label>
               <div className="relative">
                 <Lock
@@ -115,7 +117,7 @@ export function LoginScreen() {
                   onClick={() => setShowPassword((v) => !v)}
                   tabIndex={-1}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
-                  aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                  aria-label={showPassword ? t("loginScreen.hidePassword") : t("loginScreen.showPassword")}
                 >
                   {showPassword ? (
                     <EyeOff className="h-5 w-5" strokeWidth={1.5} />
@@ -151,12 +153,12 @@ export function LoginScreen() {
               {isLoading ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>جاري الدخول...</span>
+                  <span>{t("loginScreen.loading")}</span>
                 </>
               ) : (
                 <>
                   <LogIn className="h-5 w-5" />
-                  <span>دخول</span>
+                  <span>{t("loginScreen.submit")}</span>
                 </>
               )}
             </button>
@@ -173,7 +175,7 @@ export function LoginScreen() {
           >
             <Info className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
             <span>
-              <span className="font-bold">بيانات تجريبية:</span> admin / admin123
+              <span className="font-bold">{t("loginScreen.demoHintLabel")}</span> {t("loginScreen.demoHintValue")}
             </span>
           </div>
         </div>

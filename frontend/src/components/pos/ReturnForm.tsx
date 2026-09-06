@@ -4,16 +4,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../lib/ipcClient";
 import { useIpcMutation } from "../../hooks/useIpcMutation";
 import { Loader2, TriangleAlert, CircleAlert } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface SaleItemWithId {
   id: number;
-  productId: number; // ⭐ أضفنا هذا الحقل لمطابقة المنتج في المتجر
+  productId: number;
   productNameSnapshot: string;
   quantity: number;
   unitPrice: number;
 }
 
-// ⭐ نضيف واجهة لنتيجة الإرجاع لإرسالها للأب
 export interface ReturnResult {
   productId: number;
   returnedQty: number;
@@ -22,19 +22,19 @@ export interface ReturnResult {
 
 interface Props {
   saleId: number;
-  onDone: (result: ReturnResult) => void; // ⭐ تعديل لتمرير النتيجة
+  onDone: (result: ReturnResult) => void;
   onCancel: () => void;
 }
 
 export function ReturnForm({ saleId, onDone, onCancel }: Props) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<SaleItemWithId[] | null>(null);
   const [alreadyReturned, setAlreadyReturned] = useState<Record<number, number>>({});
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [reason, setReason] = useState("لا يوجد سبب");
+  const [reason, setReason] = useState(t("returnForm.noReason"));
 
-  // ⭐ تعديل onSuccess لإرسال البيانات بدل استدعاء onDone فارغة
   const createReturn = useIpcMutation(api().returns.create, {
     onSuccess: () => {
       if (selectedItem) {
@@ -84,7 +84,7 @@ export function ReturnForm({ saleId, onDone, onCancel }: Props) {
 
   async function handleSubmit() {
     if (!selectedItemId || quantity <= 0 || exceedsRemaining) return;
-    const finalReason = reason.trim() === "" ? "لا يوجد" : reason.trim();
+    const finalReason = reason.trim() === "" ? t("returnForm.noReason") : reason.trim();
     await createReturn.mutate({ saleItemId: selectedItemId, quantity, reason: finalReason });
   }
 
@@ -103,7 +103,7 @@ export function ReturnForm({ saleId, onDone, onCancel }: Props) {
       {!items && !loadError && (
         <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
           <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
-          <span>جاري التحميل...</span>
+          <span>{t("returnForm.loading")}</span>
         </div>
       )}
 
@@ -114,12 +114,12 @@ export function ReturnForm({ saleId, onDone, onCancel }: Props) {
             value={selectedItemId ?? ""}
             onChange={(e) => setSelectedItemId(Number(e.target.value) || null)}
           >
-            <option value="">اختر منتجًا...</option>
+            <option value="">{t("returnForm.selectProduct")}</option>
             {items.map((item) => {
               const rem = remainingFor(item);
               return (
                 <option key={item.id} value={item.id} disabled={rem <= 0}>
-                  {item.productNameSnapshot} — المتبكي القابل للإرجاع: {rem}
+                  {item.productNameSnapshot} — {t("returnForm.returnableRemaining")} {rem}
                 </option>
               );
             })}
@@ -133,12 +133,12 @@ export function ReturnForm({ saleId, onDone, onCancel }: Props) {
               className="yc-input w-24"
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
-              placeholder="الكمية"
+              placeholder={t("returnForm.quantity")}
               data-barcode-ignore="true"
             />
             <input
               className="yc-input flex-1"
-              placeholder="سبب الإرجاع"
+              placeholder={t("returnForm.reasonPlaceholder")}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               data-barcode-ignore="true"
@@ -156,7 +156,7 @@ export function ReturnForm({ saleId, onDone, onCancel }: Props) {
                 style={{ background: "var(--color-warning-50)", color: "var(--color-warning-600)" }}
               >
                 <CircleAlert className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
-                <span>الكمية المدخلة أكبر من المتبقي القابل للإرجاع ({remaining})</span>
+                <span>{t("returnForm.exceedsRemaining")} ({remaining})</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -191,14 +191,14 @@ export function ReturnForm({ saleId, onDone, onCancel }: Props) {
               {createReturn.isLoading ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  جاري الإرجاع...
+                  {t("returnForm.processing")}
                 </>
               ) : (
-                "تأكيد الإرجاع"
+                t("returnForm.confirm")
               )}
             </motion.button>
             <button onClick={onCancel} className="yc-btn-secondary !px-3 !py-1.5 !text-sm">
-              إلغاء
+              {t("pos.cancel")}
             </button>
           </div>
         </>

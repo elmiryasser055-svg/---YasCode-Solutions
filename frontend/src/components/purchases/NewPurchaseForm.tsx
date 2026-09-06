@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { api } from "../../lib/ipcClient";
 import { useIpcMutation } from "../../hooks/useIpcMutation";
+import { useTranslation } from "react-i18next";
 
 interface PurchaseItemDraft {
   productId: number;
@@ -17,6 +18,7 @@ interface Props {
 
 /** فاتورة شراء جديدة: بحث عن منتج بالاسم/الباركود ثم إضافته بكمية وسعر شراء محدَّدين */
 export function NewPurchaseForm({ supplierId, onDone }: Props) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<PurchaseItemDraft[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -57,11 +59,11 @@ export function NewPurchaseForm({ supplierId, onDone }: Props) {
 
   return (
     <div className="space-y-3 rounded-lg border p-4">
-      <h3 className="font-semibold">فاتورة شراء جديدة</h3>
+      <h3 className="font-semibold">{t("purchases.newInvoice")}</h3>
 
       <input
         className="w-full rounded border p-2"
-        placeholder="ابحث عن منتج بالاسم أو الباركود..."
+        placeholder={t("purchases.searchProduct")}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleAddProduct()}
@@ -71,10 +73,10 @@ export function NewPurchaseForm({ supplierId, onDone }: Props) {
       <table className="w-full text-sm">
         <thead>
           <tr>
-            <th className="p-1 text-start">المنتج</th>
-            <th className="p-1 text-start">الكمية</th>
-            <th className="p-1 text-start">سعر الوحدة</th>
-            <th className="p-1 text-start">الإجمالي</th>
+            <th className="p-1 text-start">{t("purchases.product")}</th>
+            <th className="p-1 text-start">{t("purchases.quantity")}</th>
+            <th className="p-1 text-start">{t("purchases.unitPrice")}</th>
+            <th className="p-1 text-start">{t("purchases.total")}</th>
           </tr>
         </thead>
         <tbody>
@@ -107,14 +109,14 @@ export function NewPurchaseForm({ supplierId, onDone }: Props) {
 
       <input
         className="w-full rounded border p-2"
-        placeholder="رقم الفاتورة (اختياري)"
+        placeholder={t("purchases.invoiceNumber")}
         value={invoiceNumber}
         onChange={(e) => setInvoiceNumber(e.target.value)}
         data-barcode-ignore="true"
       />
 
       <label className="block text-sm">
-        المبلغ المدفوع الآن (0 = فاتورة آجلة بالكامل)
+        {t("purchases.amountPaid")}
         <input
           type="number"
           className="mt-1 w-full rounded border p-2"
@@ -125,7 +127,7 @@ export function NewPurchaseForm({ supplierId, onDone }: Props) {
       </label>
 
       <div className="flex justify-between font-semibold">
-        <span>الإجمالي</span>
+        <span>{t("purchases.total")}</span>
         <span>{total.toFixed(2)}</span>
       </div>
 
@@ -136,7 +138,7 @@ export function NewPurchaseForm({ supplierId, onDone }: Props) {
         disabled={createPurchase.isLoading || items.length === 0}
         className="w-full rounded-md bg-blue-600 py-2 text-white disabled:opacity-50"
       >
-        {createPurchase.isLoading ? "جاري الحفظ..." : "حفظ الفاتورة"}
+        {createPurchase.isLoading ? t("purchases.saving") : t("purchases.save")}
       </button>
     </div>
   );

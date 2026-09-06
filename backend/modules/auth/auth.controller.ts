@@ -7,6 +7,8 @@ import { requireAuth } from "../../middleware/ipcAuthGuard";
 import { requireRole } from "../../middleware/ipcAuthorize";
 import { loginSchema, createUserSchema } from "./auth.schema";
 import * as authService from "./auth.service";
+import { updateCredentialsSchema } from "./auth.schema";
+
 
 export const loginController = withValidation(loginSchema, async (input) => {
   return authService.login(input);
@@ -23,4 +25,9 @@ export const createUserController = requireAuth(
       authService.createUser(validInput, session)
     )(input);
   })
+);
+export const updateCredentialsController = requireAuth(async (input, session) =>
+  withValidation(updateCredentialsSchema, (validInput) =>
+    authService.updateCredentials(validInput, session)
+  )(input)
 );

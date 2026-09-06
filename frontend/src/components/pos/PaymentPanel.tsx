@@ -35,30 +35,23 @@ export function PaymentPanel({
   const isInsufficient = change < -0.01;
   const hasValue = receivedAmount.trim() !== "";
 
-  // التركيز التلقائي على حقل الإدخال عند ظهور النافذة
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // حدث لوحة المفاتيح: اعتماد المبلغ بالضبط وإتمام البيع عند الضغط على Enter
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Enter") {
         const target = e.target as HTMLElement;
-        
-        // إذا كان التركيز على زر محدد (مثل أزرار المبالغ الجاهزة)، دعه يعمل بشكل طبيعي
-        // @ts-ignore
         if (target.tagName === "BUTTON" && target.type !== "submit") {
           return;
         }
 
         e.preventDefault();
         if (!disabled && !isLoading) {
-          // إذا كان المبلغ المدخل فارغاً أو غير كافٍ، قم باعتماد "المبلغ بالضبط" افتراضياً
           if (isInsufficient || !hasValue) {
             onReceivedChange(total.toFixed(2));
           }
-          // إتمام عملية البيع
           onComplete();
         }
       }
@@ -68,7 +61,6 @@ export function PaymentPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [disabled, isLoading, isInsufficient, hasValue, total, onReceivedChange, onComplete]);
 
-  // دالة مساعدة لاختيار المبلغ السريع وإعادة التركيز للحقل
   const handlePresetClick = (value: string) => {
     onReceivedChange(value);
     inputRef.current?.focus();
@@ -80,17 +72,16 @@ export function PaymentPanel({
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-success-50)] text-[var(--color-success-600)]">
           <Banknote className="h-4 w-4" strokeWidth={2.5} />
         </div>
-        <h3 className="text-sm font-bold text-[var(--text-primary)]">الدفع النقدي</h3>
+        <h3 className="text-sm font-bold text-[var(--text-primary)]">{t("paymentPanel.cashPayment")}</h3>
       </div>
 
-      {/* Received Input */}
       <div className="relative mb-3">
         <input
           ref={inputRef}
           type="number"
           min={0}
           step={0.01}
-          placeholder="المبلغ المستلم..."
+          placeholder={t("paymentPanel.receivedPlaceholder")}
           value={receivedAmount}
           onChange={(e) => onReceivedChange(e.target.value)}
           className="w-full rounded-xl border-2 border-[var(--border-light)] bg-[var(--bg-hover)] py-3 pr-4 pl-12 text-right text-xl font-bold text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--color-primary-400)]"
@@ -100,7 +91,7 @@ export function PaymentPanel({
           data-barcode-ignore="true"
         />
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[var(--text-muted)]">
-          د.ج
+          {t("paymentPanel.currency")}
         </span>
         {hasValue && (
           <button
@@ -115,13 +106,12 @@ export function PaymentPanel({
         )}
       </div>
 
-      {/* Quick Presets */}
       <div className="mb-3 grid grid-cols-3 gap-1.5">
         <button
           onClick={() => handlePresetClick(total.toFixed(2))}
           className="col-span-3 rounded-lg bg-gradient-to-r from-[var(--color-primary-500)] to-[var(--color-primary-600)] py-2 text-xs font-bold text-white shadow-md transition-transform active:scale-95"
         >
-          المبلغ بالضبط ({total.toFixed(2)})
+          {t("paymentPanel.exactAmount")} ({total.toFixed(2)})
         </button>
         {CASH_PRESETS.map((preset) => (
           <button
@@ -134,7 +124,6 @@ export function PaymentPanel({
         ))}
       </div>
 
-      {/* Change Display */}
       <AnimatePresence>
         {hasValue && (
           <motion.div
@@ -159,7 +148,7 @@ export function PaymentPanel({
                   <CheckCircle2 className="h-5 w-5" strokeWidth={2} />
                 )}
                 <span className="text-sm font-bold">
-                  {isInsufficient ? "المبلغ غير كافٍ" : isExact ? "تمام" : "الباقي"}
+                  {isInsufficient ? t("paymentPanel.insufficient") : isExact ? t("paymentPanel.exact") : t("paymentPanel.change")}
                 </span>
               </div>
               <span className="text-xl font-black tabular-nums">
@@ -170,7 +159,6 @@ export function PaymentPanel({
         )}
       </AnimatePresence>
 
-      {/* Complete Button */}
       <motion.button
         whileTap={{ scale: 0.97 }}
         onClick={onComplete}
@@ -185,7 +173,7 @@ export function PaymentPanel({
         {isLoading ? (
           <>
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-            جاري المعالجة...
+            {t("paymentPanel.processing")}
           </>
         ) : (
           <>
@@ -197,7 +185,7 @@ export function PaymentPanel({
 
       {!openSessionId && (
         <p className="mt-2 text-center text-xs text-[var(--color-danger-500)]">
-          افتح جلسة صندوق أولاً من شاشة الصندوق
+          {t("paymentPanel.openRegisterFirst")}
         </p>
       )}
     </div>

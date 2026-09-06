@@ -4,8 +4,9 @@ import { getDb } from "../../lib/db";
 import { users, auditLog } from "../../../db/schema";
 import { hashPassword, verifyPassword, createSession, clearSession, type Session } from "../../lib/auth";
 import { assertNotRateLimited, recordFailedAttempt, clearAttempts } from "../../lib/rateLimit";
-import { UnauthorizedError, ForbiddenError } from "../../middleware/errors";
-import type { LoginInput, CreateUserInput } from "./auth.schema";
+
+import { UnauthorizedError, ForbiddenError, NotFoundError, BusinessRuleError } from "../../middleware/errors";
+import type { LoginInput, CreateUserInput, UpdateCredentialsInput } from "./auth.schema";
 
 export async function login(input: LoginInput): Promise<Session> {
   assertNotRateLimited(input.username);
@@ -65,4 +66,40 @@ export async function createUser(input: CreateUserInput, actorSession: Session) 
   });
 
   return { id: created.id, username: created.username, role: created.role };
+}
+
+
+export async function updateCredentials(input: UpdateCredentialsInput, session: Session) {
+  const db = getDb();
+  const user = await db.query.users.findFirst({ where: eq(users.id, session.userId) });
+  
+  if (!user) throw new NotFoundError("المستخدم غير موجود.");
+
+  const validPassword = await verifyPassword(input.currentPassword, user.passwordHash);
+  if (!validPassword) {
+    throw new UnauthorizedError("كلمة المرور الحالية غير صحيحة.");
+  }
+
+  const updateData: Partial<typeof users.$inferInsert> = {};
+
+  if (input.newUsername && input.newUsername !== user.username) {
+    const existingUser = await db.query.users.findFirst({ where: eq(users.username, input.newUsername) });
+    if (existingUser) {
+      throw new BusinessRuleError("اسم المستخدم الجديد مستخدم بالفعل.");
+    }
+    updateData.username = input.newUsername;
+  }
+
+  if (input.newPassword) {
+    if (input.currentPassword === input.newPassword) {
+      throw new BusinessRuleError("لا يمكن استخدام كلمة المرور الحالية ككلمة مرور جديدة.");
+    }
+    updateData.passwordHash = await hashPassword(input.newPassword);
+  }
+
+  if (Object.keys(updateData).length > 0) {
+    await db.update(users).set(updateData).where(eq(users.id, session.userId));
+  }
+
+  return { success: true };
 }

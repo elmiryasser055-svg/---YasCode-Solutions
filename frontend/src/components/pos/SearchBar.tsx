@@ -3,6 +3,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ScanBarcode, Loader2, CornerDownLeft, Package, Weight, Tag } from "lucide-react";
 import { checkProductAvailability } from "../../lib/productAvailability";
+import { useTranslation } from "react-i18next";
 
 interface ProductResult {
   id: number;
@@ -32,6 +33,7 @@ export function SearchBar({
   loading,
   error,
 }: Props) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [highlighted, setHighlighted] = useState(0);
@@ -45,7 +47,7 @@ export function SearchBar({
 
   const handleSelect = useCallback(
     async (product: ProductResult) => {
-      if (checkingId !== null) return; // منع الاختيار المزدوج أثناء فحص سابق
+      if (checkingId !== null) return;
       setCheckingId(product.id);
       try {
         const { ok } = await checkProductAvailability(product.id, product.name);
@@ -85,7 +87,6 @@ export function SearchBar({
     [open, query, results, highlighted, handleSelect, onAddByQuery, onQueryChange]
   );
 
-  // Scroll highlighted into view
   useEffect(() => {
     if (dropdownRef.current) {
       const el = dropdownRef.current.querySelector(`[data-index="${highlighted}"]`);
@@ -110,7 +111,7 @@ export function SearchBar({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="ابحث بالاسم أو امسح الباركود..."
+          placeholder={t("searchBar.placeholder")}
           className="min-w-0 flex-1 bg-transparent text-base font-bold text-[var(--text-primary)] outline-none placeholder:font-normal placeholder:text-[var(--text-muted)]"
           autoComplete="off"
           data-barcode-ignore="true"
@@ -121,13 +122,13 @@ export function SearchBar({
             className="flex h-9 items-center gap-1.5 rounded-lg bg-gradient-to-r from-[var(--color-primary-500)] to-[var(--color-primary-600)] px-4 text-xs font-bold text-white shadow-md transition-transform active:scale-95"
           >
             <CornerDownLeft className="h-3.5 w-3.5" strokeWidth={2.5} />
-            إضافة
+            {t("searchBar.add")}
           </button>
         )}
         {loading && <Loader2 className="h-5 w-5 animate-spin text-[var(--color-primary-500)]" />}
       </div>
 
-      {/* Dropdown - محسّنة وأكبر */}
+      {/* Dropdown */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -141,14 +142,14 @@ export function SearchBar({
             {results.length === 0 && loading && (
               <div className="flex items-center gap-3 px-5 py-5 text-[var(--text-muted)]">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span className="text-sm">جاري البحث...</span>
+                <span className="text-sm">{t("searchBar.searching")}</span>
               </div>
             )}
 
             {results.length === 0 && !loading && (
               <div className="flex flex-col items-center gap-2 px-5 py-8 text-[var(--text-muted)]">
                 <Search className="h-8 w-8 opacity-30" strokeWidth={1.5} />
-                <p className="text-sm">لا توجد نتائج</p>
+                <p className="text-sm">{t("searchBar.noResults")}</p>
               </div>
             )}
 
@@ -202,7 +203,7 @@ export function SearchBar({
                             ) : (
                               <Package className="h-3 w-3" />
                             )}
-                            {product.unitType === "weight" ? "بالوزن" : "بالقطعة"}
+                            {product.unitType === "weight" ? t("searchBar.byWeight") : t("searchBar.byPiece")}
                           </span>
                           {product.categoryName && (
                             <span className="flex items-center gap-1">
@@ -218,7 +219,7 @@ export function SearchBar({
                         <span className="text-xl font-black text-[var(--color-primary-600)] tabular-nums">
                           {product.sellingPrice.toFixed(2)}
                         </span>
-                        <span className="text-[10px] text-[var(--text-muted)]">د.ج</span>
+                        <span className="text-[10px] text-[var(--text-muted)]">{t("paymentPanel.currency")}</span>
                       </div>
                     </motion.button>
                   );
@@ -229,8 +230,8 @@ export function SearchBar({
             {/* Footer hint */}
             {results.length > 0 && (
               <div className="flex items-center justify-between border-t border-[var(--border-light)] bg-[var(--bg-hover)] px-5 py-2 text-[10px] text-[var(--text-muted)]">
-                <span>↑↓ للتنقل · Enter للاختيار · Esc للإغلاق</span>
-                <span>{results.length} نتيجة</span>
+                <span>{t("searchBar.footerHint")}</span>
+                <span>{results.length} {t("searchBar.resultsCount")}</span>
               </div>
             )}
           </motion.div>
@@ -253,7 +254,7 @@ export function SearchBar({
       </AnimatePresence>
 
       <p className="mt-2 text-xs text-[var(--text-muted)]">
-        F2 للتركيز · F4 لإتمام البيع · Esc للإغلاق · ↑↓ للتنقل · Enter للإضافة
+        {t("searchBar.bottomHint")}
       </p>
     </div>
   );

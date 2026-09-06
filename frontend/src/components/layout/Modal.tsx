@@ -4,6 +4,7 @@ import type { ReactNode, ComponentType } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type Accent = "primary" | "warning" | "danger";
 
@@ -22,13 +23,9 @@ const accentStyles: Record<Accent, { icon: string; iconBg: string }> = {
   danger: { icon: "text-[var(--color-danger-600)]", iconBg: "bg-[var(--color-danger-50)]" },
 };
 
-/**
- * نافذة منبثقة (Modal) عامة قابلة لإعادة الاستخدام في شاشة البيع:
- * تعديل الفاتورة، إلغاؤها، إعادة طباعتها، أو إرجاع منتج منها — كل هذه العمليات
- * تُعرض داخل هذا المكوّن بدل أن تكون لوحات مضمّنة (inline panels) في الصفحة.
- */
 export function Modal({ isOpen, onClose, title, icon: Icon, accent = "primary", children }: ModalProps) {
-  // إغلاق بمفتاح Escape + منع تمرير الصفحة الخلفية أثناء فتح النافذة
+  const { t } = useTranslation();
+
   useEffect(() => {
     if (!isOpen) return;
     function handleKey(e: KeyboardEvent) {
@@ -81,7 +78,7 @@ export function Modal({ isOpen, onClose, title, icon: Icon, accent = "primary", 
               <button
                 onClick={onClose}
                 className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
-                aria-label="إغلاق"
+                aria-label={t("modal.close")}
               >
                 <X className="h-4 w-4" strokeWidth={2} />
               </button>

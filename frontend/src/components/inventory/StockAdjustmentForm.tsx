@@ -8,7 +8,7 @@ import { useIpcMutation } from "../../hooks/useIpcMutation";
 interface Props {
   productId: number;
   productName: string;
-  currentQuantity: number; // لإظهار الكمية الحالية وتوجيه المستخدم
+  currentQuantity: number;
   onDone: () => void;
   onClose: () => void;
 }
@@ -18,13 +18,11 @@ const QUICK_AMOUNTS = [1, 5, 10, 50];
 export function StockAdjustmentForm({ productId, productName, currentQuantity, onDone, onClose }: Props) {
   const { t } = useTranslation();
   
-  // mode: "difference" (زيادة/نقصان) أو "exact" (تحديد الكمية الفعلية للجرد)
   const [mode, setMode] = useState<"difference" | "exact">("difference");
-  const [direction, setDirection] = useState<"in" | "out">("in"); // للوضع difference فقط
+  const [direction, setDirection] = useState<"in" | "out">("in");
   const [amount, setAmount] = useState<number>(0);
-  const [reason, setReason] = useState("لايوجد سبب محدد");
+  const [reason, setReason] = useState(t("stockAdjustment.noReason"));
 
-  // نستخدم mutation واحد، ونمرر له الدالة المناسبة بناءً على mode
   const mutationFn = mode === "difference" ? api().inventory.adjustStock : api().inventory.correctInventory;
   
   const adjustStock = useIpcMutation(mutationFn as any, {
@@ -59,7 +57,7 @@ export function StockAdjustmentForm({ productId, productName, currentQuantity, o
         <div>
           <h3 className="font-bold text-lg text-[var(--text-primary)]">{productName}</h3>
           <p className="text-sm text-[var(--text-muted)]">
-            الكمية الحالية المسجلة: <span className="font-bold text-[var(--text-primary)]">{currentQuantity}</span>
+            {t("stockAdjustment.currentRecordedQty")} <span className="font-bold text-[var(--text-primary)]">{currentQuantity}</span>
           </p>
         </div>
         <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-1">
@@ -74,14 +72,14 @@ export function StockAdjustmentForm({ productId, productName, currentQuantity, o
           onClick={() => setMode("difference")}
           className={`py-2 rounded-md text-xs font-medium transition-all ${mode === "difference" ? "bg-white shadow-sm text-[var(--color-primary-600)]" : "text-[var(--text-secondary)]"}`}
         >
-          تعديل بالفرق (إدخال/إخراج)
+          {t("stockAdjustment.modeDifference")}
         </button>
         <button
           type="button"
           onClick={() => setMode("exact")}
           className={`py-2 rounded-md text-xs font-medium transition-all ${mode === "exact" ? "bg-white shadow-sm text-[var(--color-primary-600)]" : "text-[var(--text-secondary)]"}`}
         >
-          تحديد الكمية الفعلية (جرد)
+          {t("stockAdjustment.modeExact")}
         </button>
       </div>
 
@@ -95,14 +93,14 @@ export function StockAdjustmentForm({ productId, productName, currentQuantity, o
               onClick={() => setDirection("in")}
               className={`py-2 rounded-md text-sm font-medium transition-all ${direction === "in" ? "bg-white shadow-sm text-[var(--color-success-600)]" : "text-[var(--text-secondary)]"}`}
             >
-              إدخال (زيادة)
+              {t("stockAdjustment.dirIn")}
             </button>
             <button
               type="button"
               onClick={() => setDirection("out")}
               className={`py-2 rounded-md text-sm font-medium transition-all ${direction === "out" ? "bg-white shadow-sm text-[var(--color-danger-600)]" : "text-[var(--text-secondary)]"}`}
             >
-              إخراج (نقص)
+              {t("stockAdjustment.dirOut")}
             </button>
           </div>
         )}
@@ -111,7 +109,7 @@ export function StockAdjustmentForm({ productId, productName, currentQuantity, o
         <div>
           <label className="block text-sm">
             <span className="text-[var(--text-secondary)] mb-1 block">
-              {mode === "exact" ? "الكمية الفعلية المعاينة" : "الكمية المضافة/المخرجة"}
+              {mode === "exact" ? t("stockAdjustment.labelExact") : t("stockAdjustment.labelDifference")}
             </span>
             <input
               type="number"
@@ -140,13 +138,13 @@ export function StockAdjustmentForm({ productId, productName, currentQuantity, o
         </div>
 
         <label className="block text-sm">
-          <span className="text-[var(--text-secondary)] mb-1 block">السبب</span>
+          <span className="text-[var(--text-secondary)] mb-1 block">{t("stockAdjustment.reason")}</span>
           <textarea
             className="yc-input resize-none"
             rows={3}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="مثال: تلف، هدية، تصحيح جرد..."
+            placeholder={t("stockAdjustment.reasonPlaceholder")}
             data-barcode-ignore="true"
             required
           />
@@ -177,10 +175,10 @@ export function StockAdjustmentForm({ productId, productName, currentQuantity, o
             {adjustStock.isLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                جاري التنفيذ...
+                {t("stockAdjustment.processing")}
               </span>
             ) : (
-              mode === "exact" ? "حفظ نتيجة الجرد" : direction === "in" ? "تأكيد الإدخال" : "تأكيد الإخراج"
+              mode === "exact" ? t("stockAdjustment.saveInventory") : direction === "in" ? t("stockAdjustment.confirmIn") : t("stockAdjustment.confirmOut")
             )}
           </button>
         </div>

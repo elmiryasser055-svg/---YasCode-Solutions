@@ -14,3 +14,11 @@ export const createUserSchema = z.object({
   role: z.enum(["owner", "cashier"]),
 });
 export type CreateUserInput = z.infer<typeof createUserSchema>;
+export const updateCredentialsSchema = z.object({
+  currentPassword: z.string().min(1, "كلمة المرور الحالية مطلوبة لتأكيد الهوية."),
+  newUsername: z.string().min(3).max(50).optional(),
+  newPassword: z.string().min(8).max(100).optional(),
+}).refine(d => d.newUsername || d.newPassword, {
+  message: "يجب إدخال اسم مستخدم جديد أو كلمة مرور جديدة على الأقل.",
+});
+export type UpdateCredentialsInput = z.infer<typeof updateCredentialsSchema>;

@@ -5,9 +5,11 @@ import { api } from "../../lib/ipcClient";
 import { useIpcQuery } from "../../hooks/useIpcQuery";
 import { useIpcMutation } from "../../hooks/useIpcMutation";
 import { confirm } from "../../store/confirmStore";
-import { toast } from "../../lib/toast"; // استيراد الـ toast الخاص بك
+import { toast } from "../../lib/toast";
+import { useTranslation } from "react-i18next";
 
 export function CategoriesScreen() {
+  const { t } = useTranslation();
   const categories = useIpcQuery(() => api().categories.list());
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -17,7 +19,7 @@ export function CategoriesScreen() {
     onSuccess: () => {
       categories.refetch();
       setNewName("");
-      toast.success("تمت إضافة الفئة بنجاح");
+      toast.success(t("categoriesScreen.createSuccess"));
     },
     onError: (err) => toast.error(err),
   });
@@ -26,7 +28,7 @@ export function CategoriesScreen() {
     onSuccess: () => {
       categories.refetch();
       setEditingId(null);
-      toast.success("تم تحديث الفئة بنجاح");
+      toast.success(t("categoriesScreen.updateSuccess"));
     },
     onError: (err) => toast.error(err),
   });
@@ -34,14 +36,14 @@ export function CategoriesScreen() {
   const deleteCategory = useIpcMutation(api().categories.delete, {
     onSuccess: () => {
       categories.refetch();
-      toast.success("تم حذف الفئة. المنتجات المرتبطة أصبحت بلا فئة.");
+      toast.success(t("categoriesScreen.deleteSuccess"));
     },
     onError: (err) => toast.error(err),
   });
 
   async function handleDelete(id: number, name: string) {
     const confirmed = await confirm(
-      `هل أنت متأكد من حذف الفئة "${name}"؟ المنتجات المرتبطة بها ستصبح بلا فئة (لن تُحذف).`
+      t("categoriesScreen.deleteConfirm", { name })
     );
     if (confirmed) deleteCategory.mutate({ id });
   }
@@ -53,16 +55,16 @@ export function CategoriesScreen() {
         animate={{ opacity: 1, y: 0 }} 
         className="mb-6 text-2xl font-bold text-[var(--text-primary)]"
       >
-        إدارة الفئات
+        {t("categoriesScreen.title")}
       </motion.h1>
 
       {/* Add New Category Form */}
       <div className="yc-card mb-6">
-        <h3 className="mb-3 text-sm font-medium text-[var(--text-secondary)]">إضافة فئة جديدة</h3>
+        <h3 className="mb-3 text-sm font-medium text-[var(--text-secondary)]">{t("categoriesScreen.addNewTitle")}</h3>
         <div className="flex gap-2">
           <input
             className="yc-input flex-1"
-            placeholder="مثال: مشروبات، ألبان، تنضيد..."
+            placeholder={t("categoriesScreen.addPlaceholder")}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             data-barcode-ignore="true"
@@ -77,7 +79,7 @@ export function CategoriesScreen() {
             ) : (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
             )}
-            <span>إضافة</span>
+            <span>{t("categoriesScreen.addButton")}</span>
           </button>
         </div>
       </div>
@@ -119,13 +121,13 @@ export function CategoriesScreen() {
                         disabled={updateCategory.isLoading || editingName.length < 2}
                         className="yc-btn-success !py-1.5 !px-3 text-xs"
                       >
-                        حفظ
+                        {t("categoriesScreen.saveButton")}
                       </button>
                       <button 
                         onClick={() => setEditingId(null)} 
                         className="yc-btn-secondary !py-1.5 !px-3 text-xs"
                       >
-                        إلغاء
+                        {t("categoriesScreen.cancelButton")}
                       </button>
                     </div>
                   ) : (
@@ -140,12 +142,12 @@ export function CategoriesScreen() {
                           className="yc-btn-secondary !py-1.5 !px-3 text-xs"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                          تعديل
+                          {t("categoriesScreen.editButton")}
                         </button>
                         <button 
                           onClick={() => handleDelete(c.id, c.name)} 
                           className="text-[var(--color-danger-600)] hover:bg-[var(--color-danger-50)] p-1.5 rounded-md transition-colors"
-                          title="حذف"
+                          title={t("categoriesScreen.deleteButton")}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
@@ -159,7 +161,7 @@ export function CategoriesScreen() {
             {!categories.isLoading && (categories.data ?? []).length === 0 && (
               <div className="p-8 text-center text-[var(--text-muted)] flex flex-col items-center gap-2 animate-fade-in">
                 <svg className="w-12 h-12 text-[var(--color-gray-300)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                لا توجد فئات بعد. ابدأ بإضافة فئة جديدة أعلاه.
+                {t("categoriesScreen.emptyState")}
               </div>
             )}
           </div>

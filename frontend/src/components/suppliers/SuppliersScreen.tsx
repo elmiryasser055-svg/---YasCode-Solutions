@@ -6,6 +6,7 @@ import { useIpcQuery } from "../../hooks/useIpcQuery";
 import { useIpcMutation } from "../../hooks/useIpcMutation";
 import { SupplierDetail } from "./SupplierDetail";
 import { toast } from "../../lib/toast";
+import { useTranslation } from "react-i18next";
 
 interface Supplier {
   id: number;
@@ -14,6 +15,7 @@ interface Supplier {
 }
 
 export function SuppliersScreen() {
+  const { t } = useTranslation();
   const suppliers = useIpcQuery(() => api().suppliers.list());
   const [selected, setSelected] = useState<Supplier | null>(null);
   const [newName, setNewName] = useState("");
@@ -24,7 +26,7 @@ export function SuppliersScreen() {
       suppliers.refetch();
       setNewName("");
       setNewPhone("");
-      toast.success("تم إضافة المورّد بنجاح");
+      toast.success(t("suppliers.add_success"));
     },
     onError: (err) => toast.error(err),
   });
@@ -36,21 +38,21 @@ export function SuppliersScreen() {
         animate={{ opacity: 1, y: 0 }} 
         className="text-2xl font-bold text-[var(--text-primary)]"
       >
-        الموردون
+        {t("suppliers.title")}
       </motion.h1>
 
       {/* Add Form */}
       <div className="yc-card grid grid-cols-1 md:grid-cols-3 gap-3">
         <input
           className="yc-input md:col-span-2"
-          placeholder="اسم المورّد"
+          placeholder={t("suppliers.name_placeholder")}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           data-barcode-ignore="true"
         />
         <input
           className="yc-input"
-          placeholder="رقم الهاتف (اختياري)"
+          placeholder={t("suppliers.phone_placeholder")}
           value={newPhone}
           onChange={(e) => setNewPhone(e.target.value)}
           data-barcode-ignore="true"
@@ -65,7 +67,7 @@ export function SuppliersScreen() {
           ) : (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
           )}
-          <span>إضافة مورّد جديد</span>
+          <span>{t("suppliers.add_new")}</span>
         </button>
       </div>
 
@@ -105,7 +107,7 @@ export function SuppliersScreen() {
             {!suppliers.isLoading && (suppliers.data ?? []).length === 0 && (
               <div className="p-8 text-center text-sm text-[var(--text-muted)] flex flex-col items-center gap-2">
                 <svg className="w-12 h-12 text-[var(--color-gray-300)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                لا يوجد موردون بعد. ابدأ بإضافة مورّد جديد.
+                {t("suppliers.empty_state")}
               </div>
             )}
           </div>

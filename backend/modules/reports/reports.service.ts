@@ -1,15 +1,8 @@
 // modules/reports/reports.service.ts
-//
-// الربح لكل عملية بيع = sale.total - مجموع (costPriceSnapshot × quantity) لبنودها.
-// نعتمد على sale.total (وليس subtotal) لأنه يخصم الخصم أصلاً — فالربح المحسوب
-// هنا صافٍ من الخصم تلقائيًا دون أي حساب إضافي. الاعتماد على costPriceSnapshot
-// (وليس products.purchasePrice الحالي) يضمن دقة الأرباح التاريخية حتى لو تغيّر
-// سعر الشراء لاحقًا — نفس المبدأ الموثّق في schemaDB.md § سيناريو 1.
-
-import { and, eq, gte } from "drizzle-orm";
+import { and, eq, gte, sum, desc, isNotNull, gt } from "drizzle-orm";
 import { getDb } from "../../lib/db";
-import { sales } from "../../../db/schema";
-import type { ProfitTrendInput } from "./reports.schema";
+import { sales, saleItems, products } from "../../../db/schema";
+import type { ProfitTrendInput, ProductPerformanceInput } from "./reports.schema";
 
 interface Bucket {
   label: string;
@@ -39,10 +32,10 @@ function getBucketLabel(date: Date, period: ProfitTrendInput["period"]): string 
 
 function getRangeStart(period: ProfitTrendInput["period"]): Date {
   const now = new Date();
-  if (period === "daily") return new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000); // آخر 14 يوم
-  if (period === "weekly") return new Date(now.getTime() - 8 * 7 * 24 * 60 * 60 * 1000); // آخر 8 أسابيع
+  if (period === "daily") return new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  if (period === "weekly") return new Date(now.getTime() - 8 * 7 * 24 * 60 * 60 * 1000);
   const monthsAgo = new Date(now);
-  monthsAgo.setMonth(monthsAgo.getMonth() - 12); // آخر 12 شهر
+  monthsAgo.setMonth(monthsAgo.getMonth() - 12);
   return monthsAgo;
 }
 
@@ -50,7 +43,6 @@ export async function getProfitTrend(input: ProfitTrendInput): Promise<Bucket[]>
   const db = getDb();
   const start = getRangeStart(input.period);
 
-  // نجلب المبيعات المكتملة ضمن الفترة مع بنودها دفعة واحدة (مقبول لحجم بيانات محل واحد)
   const salesInRange = await db.query.sales.findMany({
     where: and(eq(sales.status, "completed"), gte(sales.createdAt, start.toISOString())),
     with: { items: true },
@@ -74,7 +66,6 @@ export async function getProfitTrend(input: ProfitTrendInput): Promise<Bucket[]>
   return Array.from(buckets.values()).sort((a, b) => a.label.localeCompare(b.label));
 }
 
-/** ملخص سريع لليوم الحالي — يُستخدم في بطاقات أعلى شاشة التقارير */
 export async function getTodaySummary() {
   const db = getDb();
   const startOfDay = new Date();
@@ -92,4 +83,100 @@ export async function getTodaySummary() {
   );
 
   return { revenue, cost, profit: revenue - cost, salesCount: todaySales.length };
+}
+
+/**
+ * الأكثر مبيعاً (Best Sellers)
+ */
+export async function getBestSellers(input: ProductPerformanceInput) {
+  const db = getDb();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - input.days);
+
+  const result = await db
+    .select({
+      productId: saleItems.productId,
+      name: products.name,
+      barcode: products.barcode,
+      totalQuantitySold: sum(saleItems.quantity),
+      totalRevenue: sum(saleItems.lineTotal),
+      currentStock: products.currentQuantity,
+    })
+    .from(saleItems)
+    .innerJoin(sales, eq(saleItems.saleId, sales.id))
+    .innerJoin(products, eq(saleItems.productId, products.id))
+    .where(
+      and(
+        eq(sales.status, "completed"),
+        gte(sales.createdAt, startDate.toISOString()),
+        isNotNull(saleItems.productId)
+      )
+    )
+    .groupBy(saleItems.productId, products.name, products.barcode, products.currentQuantity)
+    .orderBy(desc(sum(saleItems.quantity)))
+    .limit(input.limit);
+
+  return result.map((row) => ({
+    ...row,
+    totalQuantitySold: Number(row.totalQuantitySold ?? 0),
+    totalRevenue: Number(row.totalRevenue ?? 0),
+  }));
+}
+
+/**
+ * البضاعة الراكدة (Dead Stock)
+ */
+export async function getDeadStock(input: ProductPerformanceInput) {
+  const db = getDb();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - input.days);
+
+  const activeProducts = await db.query.products.findMany({
+    where: and(
+      eq(products.isActive, true),
+      gt(products.currentQuantity, 0)
+    ),
+  });
+
+  const soldProductsData = await db
+    .select({
+      productId: saleItems.productId,
+      totalSold: sum(saleItems.quantity),
+    })
+    .from(saleItems)
+    .innerJoin(sales, eq(saleItems.saleId, sales.id))
+    .where(
+      and(
+        eq(sales.status, "completed"),
+        gte(sales.createdAt, startDate.toISOString()),
+        isNotNull(saleItems.productId)
+      )
+    )
+    .groupBy(saleItems.productId);
+
+  const soldMap = new Map<number, number>();
+  for (const item of soldProductsData) {
+    // ⭐ تصحيح خطأ TypeScript: التأكد من أن productId ليس null
+    if (item.productId) {
+      soldMap.set(item.productId, Number(item.totalSold ?? 0));
+    }
+  }
+
+  const deadStock = activeProducts
+    .map((product) => {
+      const soldQty = soldMap.get(product.id) ?? 0;
+      return {
+        productId: product.id,
+        name: product.name,
+        barcode: product.barcode,
+        currentStock: product.currentQuantity,
+        totalSoldInPeriod: soldQty,
+        frozenCapital: product.currentQuantity * product.purchasePrice,
+      };
+    })
+    .filter((p) => p.totalSoldInPeriod === 0)
+    .sort((a, b) => b.frozenCapital - a.frozenCapital)
+    .slice(0, input.limit);
+
+  return deadStock;
 }

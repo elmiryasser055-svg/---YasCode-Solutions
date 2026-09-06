@@ -56,12 +56,11 @@ export function SaleScreen() {
   const [activePanel, setActivePanel] = useState<ActivePanel>("none");
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   
-  // ⭐ حالة نافذة السعر الحر
   const [isCustomPriceModalOpen, setIsCustomPriceModalOpen] = useState(false);
   const [customPrice, setCustomPrice] = useState("");
   const [customQty, setCustomQty] = useState("1");
 
-  const [cancelReason, setCancelReason] = useState("لا يوجد سبب");
+  const [cancelReason, setCancelReason] = useState(t("editSale.noReason"));
   const [printStatus, setPrintStatus] = useState<string | null>(null);
   const [reprinting, setReprinting] = useState(false);
   const [receivedAmount, setReceivedAmount] = useState("");
@@ -96,7 +95,7 @@ export function SaleScreen() {
       try {
         const results = await api().products.search({ query, page: 1, pageSize: 5 });
         if (!results.ok || results.data.items.length === 0) {
-          setScanError(isBarcode ? `لم يُعثر على منتج بالباركود: ${query}` : `لا نتائج لـ: ${query}`);
+          setScanError(isBarcode ? `${t("saleScreen.notFoundBarcode")} ${query}` : `${t("saleScreen.noResultsFor")} ${query}`);
           playError();
           return;
         }
@@ -111,11 +110,11 @@ export function SaleScreen() {
         playScan();
         setSearchQuery("");
       } catch {
-        setScanError("تعذّر البحث عن المنتج، حاول مجددًا.");
+        setScanError(t("saleScreen.searchError"));
         playError();
       }
     },
-    [cart, playScan, playError]
+    [cart, playScan, playError, t]
   );
 
   const handleBarcodeScan = useCallback(
@@ -167,21 +166,21 @@ export function SaleScreen() {
       setSelectedSale(record);
       setActivePanel("none");
       playSuccess();
-      toast.success(`تم البيع بنجاح — ${sale.saleNumber}`);
+      toast.success(`${t("saleScreen.saleSuccess")} ${sale.saleNumber}`);
 
-      setPrintStatus("جاري الطباعة...");
+      setPrintStatus(t("saleScreen.printing"));
       try {
         const result = await api().printing.printSaleTicket({ saleId: sale.id });
         if (result.ok) {
-          setPrintStatus("تمت الطباعة");
-          toast.info("تمت طباعة التذكرة");
+          setPrintStatus(t("saleScreen.printed"));
+          toast.info(t("saleScreen.ticketPrinted"));
         } else {
-          setPrintStatus(`تعذّرت الطباعة: ${result.error}`);
-          toast.error("تعذّرت الطباعة");
+          setPrintStatus(`${t("saleScreen.printFailed")} ${result.error}`);
+          toast.error(t("saleScreen.printError"));
         }
       } catch {
-        setPrintStatus("تعذّرت الطباعة — تحقق من الطابعة.");
-        toast.error("تعذّرت الطباعة");
+        setPrintStatus(t("saleScreen.printError"));
+        toast.error(t("saleScreen.printError"));
       }
     },
     onError: (msg) => {
@@ -193,12 +192,12 @@ export function SaleScreen() {
   const cancelSale = useIpcMutation(api().sales.cancel, {
     onSuccess: () => {
       setActivePanel("none");
-      setCancelReason("لا يوجد سبب");
+      setCancelReason(t("editSale.noReason"));
       if (selectedSale) {
         removeRecentSale(selectedSale.id);
         setSelectedSale(null);
       }
-      toast.info("تم إلغاء البيع");
+      toast.info(t("saleScreen.canceled"));
     },
     onError: (msg) => {
       playError();
@@ -206,20 +205,18 @@ export function SaleScreen() {
     },
   });
 
-  // ⭐ دالة إتمام البيع المحدثة لدعم السعر الحر
   async function handleCompleteSale() {
     if (!openSessionId) {
-      setScanError("لا توجد جلسة صندوق مفتوحة.");
+      setScanError(t("saleScreen.noOpenSession"));
       playError();
-      toast.error("افتح جلسة صندوق أولاً");
+      toast.error(t("saleScreen.openRegisterFirst"));
       return;
     }
     if (cart.items.length === 0) {
-      toast.error("السلة فارغة");
+      toast.error(t("saleScreen.cartEmpty"));
       return;
     }
 
-    // تجهيز البيانات: إذا كان productId = 0 نرسله كسعر حر
     const payloadItems = cart.items.map((i) => {
       if (i.productId === 0) {
         return { customName: i.name, customPrice: i.sellingPrice, quantity: i.quantity };
@@ -228,7 +225,7 @@ export function SaleScreen() {
     });
 
     await createSale.mutate({
-      items: payloadItems as any, // تجاوز فحص الأنواع المؤقت لتمرير الحقول الجديدة
+      items: payloadItems as any,
       discount: cart.discount,
       cashRegisterSessionId: openSessionId,
     });
@@ -236,37 +233,36 @@ export function SaleScreen() {
 
   async function handleReprint(saleId: number) {
     setReprinting(true);
-    setPrintStatus("جاري إعادة الطباعة...");
+    setPrintStatus(t("saleScreen.reprinting"));
     try {
       const result = await api().printing.printSaleTicket({ saleId });
       if (result.ok) {
-        setPrintStatus("تمت إعادة الطباعة");
-        toast.info("تمت إعادة الطباعة");
+        setPrintStatus(t("saleScreen.reprinted"));
+        toast.info(t("saleScreen.reprinted"));
       } else {
-        setPrintStatus(`تعذّرت الطباعة: ${result.error}`);
-        toast.error("تعذّرت إعادة الطباعة");
+        setPrintStatus(`${t("saleScreen.printFailed")} ${result.error}`);
+        toast.error(t("saleScreen.reprintFailed"));
       }
     } catch {
-      setPrintStatus("تعذّرت الطباعة — تحقق من الطابعة.");
-      toast.error("تعذّرت إعادة الطباعة");
+      setPrintStatus(t("saleScreen.printError"));
+      toast.error(t("saleScreen.reprintFailed"));
     } finally {
       setReprinting(false);
     }
   }
 
-  // ⭐ دالة إضافة السعر الحر للسلة
   const handleAddCustomPrice = useCallback(() => {
     const amount = Number(customPrice);
     const qty = Number(customQty) || 1;
 
     if (isNaN(amount) || amount <= 0) {
-      toast.error("أدخل مبلغاً صحيحاً");
+      toast.error(t("saleScreen.invalidAmount"));
       return;
     }
 
     cart.addItem({
-      productId: 0, // 0 يدل على أنه سعر حر
-      name: "سعر حر / إضافة يدوية",
+      productId: 0,
+      name: t("saleScreen.customPriceName"),
       barcode: null,
       unitType: "piece",
       sellingPrice: amount,
@@ -276,12 +272,12 @@ export function SaleScreen() {
     setCustomPrice("");
     setCustomQty("1");
     setIsCustomPriceModalOpen(false);
-  }, [cart, customPrice, customQty, playScan]);
+  }, [cart, customPrice, customQty, playScan, t]);
 
   useKeyboardShortcuts(
     {
       F2: () => document.querySelector<HTMLInputElement>('input[data-barcode-ignore="true"]')?.focus(),
-      F3: () => setIsCustomPriceModalOpen(true), // ⭐ اختصار فتح نافذة السعر الحر
+      F3: () => setIsCustomPriceModalOpen(true),
       F4: () => {
         if (cart.items.length > 0 && openSessionId) {
           setIsPaymentModalOpen(true);
@@ -336,7 +332,7 @@ export function SaleScreen() {
           <button
             onClick={() => setIsCustomPriceModalOpen(true)}
             className="flex w-14 flex-shrink-0 items-center justify-center rounded-2xl border border-[var(--color-primary-200)] bg-gradient-to-br from-[var(--color-primary-50)] to-white text-[var(--color-primary-700)] shadow-sm transition-all hover:shadow-md"
-            title="إضافة سعر حر (F3)"
+            title={`${t("saleScreen.addCustomPrice")} (F3)`}
           >
             <PlusCircle className="h-6 w-6" strokeWidth={2} />
           </button>
@@ -382,7 +378,7 @@ export function SaleScreen() {
                         className="flex items-center gap-1.5 rounded-xl border border-[var(--color-primary-200)] bg-gradient-to-r from-[var(--color-primary-50)] to-white px-3 py-2 text-xs font-bold text-[var(--color-primary-700)] shadow-sm transition-all hover:shadow-md"
                       >
                         <Pencil className="h-4 w-4" strokeWidth={2} />
-                        تعديل
+                        {t("saleScreen.edit")}
                       </button>
 
                       <button
@@ -390,18 +386,18 @@ export function SaleScreen() {
                         className="flex items-center gap-1.5 rounded-xl border border-[var(--color-warning-200)] bg-gradient-to-r from-[var(--color-warning-50)] to-white px-3 py-2 text-xs font-bold text-[var(--color-warning-700)] shadow-sm transition-all hover:shadow-md"
                       >
                         <RotateCcw className="h-4 w-4" strokeWidth={2} />
-                        إرجاع
+                        {t("saleScreen.return")}
                       </button>
 
                       <button
                         onClick={() => {
-                          setCancelReason("لا يوجد سبب");
+                          setCancelReason(t("editSale.noReason"));
                           openAction(sale, "cancel");
                         }}
                         className="flex items-center gap-1.5 rounded-xl border border-[var(--color-danger-200)] bg-gradient-to-r from-[var(--color-danger-50)] to-white px-3 py-2 text-xs font-bold text-[var(--color-danger-700)] shadow-sm transition-all hover:shadow-md"
                       >
                         <X className="h-4 w-4" strokeWidth={2} />
-                        إلغاء
+                        {t("pos.cancel")}
                       </button>
                     </>
                   )}
@@ -429,9 +425,9 @@ export function SaleScreen() {
 
         <div className="flex flex-shrink-0 items-center gap-3 rounded-2xl border border-[var(--border-light)] bg-[var(--bg-card)] p-3 shadow-[var(--shadow-sm)]">
           <div className="flex flex-col">
-            <span className="text-[10px] font-medium text-[var(--text-muted)]">الإجمالي المطلوب</span>
+            <span className="text-[10px] font-medium text-[var(--text-muted)]">{t("saleScreen.requiredTotal")}</span>
             <span className="text-2xl font-black tabular-nums text-[var(--color-primary-700)]">
-              {totalValue.toFixed(2)} د.ج
+              {totalValue.toFixed(2)} {t("paymentPanel.currency")}
             </span>
           </div>
           <motion.button
@@ -446,23 +442,22 @@ export function SaleScreen() {
             }}
           >
             <Wallet className="h-5 w-5" strokeWidth={2.5} />
-            {openSessionId ? "إتمام الدفع (F4)" : "افتح الصندوق أولاً"}
+            {openSessionId ? t("saleScreen.completePayment") : t("saleScreen.openRegister")}
           </motion.button>
         </div>
       </div>
 
-      {/* ⭐ نافذة إضافة سعر حر */}
       <Modal
         isOpen={isCustomPriceModalOpen}
         onClose={() => setIsCustomPriceModalOpen(false)}
-        title="إضافة سعر حر"
+        title={t("saleScreen.addCustomPrice")}
         icon={PlusCircle}
         accent="primary"
       >
         <div className="space-y-4">
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">المبلغ (د.ج)</label>
+              <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">{t("saleScreen.amount")}</label>
               <input
                 type="number"
                 autoFocus
@@ -476,7 +471,7 @@ export function SaleScreen() {
               />
             </div>
             <div className="w-24">
-              <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">الكمية</label>
+              <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">{t("saleScreen.qty")}</label>
               <input
                 type="number"
                 min={1}
@@ -493,23 +488,22 @@ export function SaleScreen() {
               onClick={handleAddCustomPrice}
               className="yc-btn-primary flex-1 !py-2.5 !text-sm"
             >
-              إضافة للسلة
+              {t("saleScreen.addToCart")}
             </button>
             <button
               onClick={() => setIsCustomPriceModalOpen(false)}
               className="yc-btn-secondary !px-5 !py-2.5 !text-sm"
             >
-              إلغاء
+              {t("pos.cancel")}
             </button>
           </div>
         </div>
       </Modal>
 
-      {/* نافذة الدفع */}
       <Modal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
-        title="إتمام عملية الدفع"
+        title={t("saleScreen.completePaymentTitle")}
         icon={Wallet}
         accent="primary"
       >
@@ -524,17 +518,16 @@ export function SaleScreen() {
         />
       </Modal>
 
-      {/* نافذة إعادة الطباعة */}
       <Modal
         isOpen={activePanel === "reprint"}
         onClose={() => setActivePanel("none")}
-        title={selectedSale ? `إعادة طباعة الفاتورة #${selectedSale.saleNumber}` : "إعادة طباعة"}
+        title={selectedSale ? `${t("saleScreen.reprintInvoiceTitle")}${selectedSale.saleNumber}` : t("saleScreen.reprintTitle")}
         icon={Printer}
         accent="primary"
       >
         {selectedSale && (
           <div className="space-y-4">
-            <p className="text-sm text-[var(--text-secondary)]">هل تريد إعادة طباعة تذكرة هذه الفاتورة؟</p>
+            <p className="text-sm text-[var(--text-secondary)]">{t("saleScreen.reprintConfirm")}</p>
             {printStatus && (
               <p className="text-sm font-semibold text-[var(--color-primary-700)]">{printStatus}</p>
             )}
@@ -547,21 +540,20 @@ export function SaleScreen() {
                 disabled={reprinting}
                 className="yc-btn-primary !px-4 !py-2 !text-sm"
               >
-                {reprinting ? "جاري إعادة الطباعة..." : "تأكيد إعادة الطباعة"}
+                {reprinting ? t("saleScreen.reprinting") : t("saleScreen.confirmReprint")}
               </button>
               <button onClick={() => setActivePanel("none")} className="yc-btn-secondary !px-4 !py-2 !text-sm">
-                إلغاء
+                {t("pos.cancel")}
               </button>
             </div>
           </div>
         )}
       </Modal>
 
-      {/* نافذة إلغاء الفاتورة */}
       <Modal
         isOpen={activePanel === "cancel"}
         onClose={() => setActivePanel("none")}
-        title={selectedSale ? `إلغاء الفاتورة #${selectedSale.saleNumber}` : "إلغاء الفاتورة"}
+        title={selectedSale ? `${t("saleScreen.cancelInvoiceTitle")}${selectedSale.saleNumber}` : t("saleScreen.cancelInvoice")}
         icon={Receipt}
         accent="danger"
       >
@@ -569,7 +561,7 @@ export function SaleScreen() {
           <div className="space-y-3">
             <input
               className="yc-input w-full"
-              placeholder="سبب الإلغاء (اختياري)"
+              placeholder={t("saleScreen.cancelReasonPlaceholder")}
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
               data-barcode-ignore="true"
@@ -580,27 +572,26 @@ export function SaleScreen() {
                 onClick={() =>
                   cancelSale.mutate({
                     saleId: selectedSale.id,
-                    reason: cancelReason.trim() || "لا يوجد سبب",
+                    reason: cancelReason.trim() || t("editSale.noReason"),
                   })
                 }
                 disabled={cancelSale.isLoading}
                 className="yc-btn-danger !px-5 !py-2.5 !text-sm"
               >
-                {cancelSale.isLoading ? "جاري الإلغاء..." : "تأكيد الإلغاء"}
+                {cancelSale.isLoading ? t("saleScreen.canceling") : t("saleScreen.confirmCancel")}
               </button>
               <button onClick={() => setActivePanel("none")} className="yc-btn-secondary !px-5 !py-2.5 !text-sm">
-                إلغاء
+                {t("pos.cancel")}
               </button>
             </div>
           </div>
         )}
       </Modal>
 
-      {/* نافذة تعديل الفاتورة */}
       <Modal
         isOpen={activePanel === "edit"}
         onClose={() => setActivePanel("none")}
-        title={selectedSale ? `تعديل الفاتورة #${selectedSale.saleNumber}` : "تعديل الفاتورة"}
+        title={selectedSale ? `${t("saleScreen.editInvoiceTitle")}${selectedSale.saleNumber}` : t("saleScreen.editInvoice")}
         icon={Pencil}
         accent="primary"
       >
@@ -614,18 +605,17 @@ export function SaleScreen() {
               setActivePanel("none");
               updateRecentSale(updatedSale);
               setSelectedSale(updatedSale);
-              toast.success("تم تعديل الفاتورة");
+              toast.success(t("saleScreen.invoiceEdited"));
             }}
             onCancel={() => setActivePanel("none")}
           />
         )}
       </Modal>
 
-      {/* نافذة إرجاع منتج */}
       <Modal
         isOpen={activePanel === "return"}
         onClose={() => setActivePanel("none")}
-        title={selectedSale ? `إرجاع منتج — الفاتورة #${selectedSale.saleNumber}` : "إرجاع منتج"}
+        title={selectedSale ? `${t("saleScreen.returnProductTitle")}${selectedSale.saleNumber}` : t("saleScreen.returnProduct")}
         icon={RotateCcw}
         accent="warning"
       >
@@ -635,7 +625,7 @@ export function SaleScreen() {
             onDone={(result) => {
               setActivePanel("none");
               updateRecentSaleAfterReturn(selectedSale.id, result);
-              toast.success("تم الإرجاع بنجاح");
+              toast.success(t("saleScreen.returnSuccess"));
             }}
             onCancel={() => setActivePanel("none")}
           />

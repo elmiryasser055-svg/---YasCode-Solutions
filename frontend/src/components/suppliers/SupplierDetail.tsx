@@ -6,6 +6,7 @@ import { useIpcQuery } from "../../hooks/useIpcQuery";
 import { useIpcMutation } from "../../hooks/useIpcMutation";
 import { NewPurchaseForm } from "../purchases/NewPurchaseForm";
 import { toast } from "../../lib/toast";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   supplierId: number;
@@ -13,23 +14,11 @@ interface Props {
   onClose: () => void;
 }
 
-const getStatusBadgeClass = (status: string) => {
-  if (status === "paid") return "yc-badge-green";
-  if (status === "partial") return "yc-badge-amber";
-  return "yc-badge-red";
-};
-
-const translateStatus = (status: string) => {
-  if (status === "paid") return "مدفوعة";
-  if (status === "partial") return "مدفوعة جزئياً";
-  return "غير مدفوعة";
-};
-
 export function SupplierDetail({ supplierId, supplierName, onClose }: Props) {
+  const { t } = useTranslation();
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [showNewPurchase, setShowNewPurchase] = useState(false);
   
-  // مفتاح التحديث: تغييره يجبر useIpcQuery على إعادة جلب البيانات
   const [refreshKey, setRefreshKey] = useState(0);
   const triggerRefresh = () => setRefreshKey((k) => k + 1);
 
@@ -43,17 +32,28 @@ export function SupplierDetail({ supplierId, supplierName, onClose }: Props) {
     [supplierId, refreshKey]
   );
 
-  // لطباعة الخطأ القادم من الباك إند في حال وجوده (يساعد في التنقيح)
   if (purchases.error) console.error("Purchases Error:", purchases.error);
 
   const recordPayment = useIpcMutation(api().purchases.recordSupplierPayment, {
     onSuccess: () => {
       triggerRefresh();
       setPaymentAmount(0);
-      toast.success("تم تسجيل الدفعة بنجاح");
+      toast.success(t("suppliers.paymentSuccess"));
     },
     onError: (err) => toast.error(err),
   });
+
+  const getStatusBadgeClass = (status: string) => {
+    if (status === "paid") return "yc-badge-green";
+    if (status === "partial") return "yc-badge-amber";
+    return "yc-badge-red";
+  };
+
+  const translateStatus = (status: string) => {
+    if (status === "paid") return t("suppliers.status_paid");
+    if (status === "partial") return t("suppliers.status_partial");
+    return t("suppliers.status_unpaid");
+  };
 
   return (
     <div 
@@ -73,9 +73,9 @@ export function SupplierDetail({ supplierId, supplierName, onClose }: Props) {
           <div>
             <h2 className="text-xl font-bold text-[var(--text-primary)]">{supplierName}</h2>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              الدَين الحالي:{" "}
+              {t("suppliers.current_debt")}{" "}
               <span className={`font-bold ${debt.data && debt.data > 0 ? "text-[var(--color-danger-600)]" : "text-[var(--color-success-600)]"}`}>
-                {debt.isLoading ? "..." : `${debt.data ?? 0} د.أ`}
+                {debt.isLoading ? "..." : `${debt.data ?? 0} ${t("reports.currency")}`}
               </span>
             </p>
           </div>
@@ -87,17 +87,17 @@ export function SupplierDetail({ supplierId, supplierName, onClose }: Props) {
           </button>
         </div>
 
-        {/* Modal Body (Scrollable) */}
+        {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           
           {/* Payment Form */}
           <div className="flex flex-wrap items-end gap-3 p-4 rounded-lg border border-[var(--border-light)] bg-white">
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-sm text-[var(--text-secondary)] mb-1">تسجيل دفعة جديدة</label>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1">{t("suppliers.record_new_payment")}</label>
               <input
                 type="number"
                 className="yc-input"
-                placeholder="مبلغ الدفعة"
+                placeholder={t("suppliers.payment_amount_placeholder")}
                 value={paymentAmount || ""}
                 onChange={(e) => setPaymentAmount(Number(e.target.value))}
                 data-barcode-ignore="true"
@@ -113,7 +113,7 @@ export function SupplierDetail({ supplierId, supplierName, onClose }: Props) {
               ) : (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
               )}
-              <span>تأكيد الدفعة</span>
+              <span>{t("suppliers.confirm_payment")}</span>
             </button>
           </div>
 
@@ -123,7 +123,7 @@ export function SupplierDetail({ supplierId, supplierName, onClose }: Props) {
             className={`yc-btn-secondary ${showNewPurchase ? "bg-[var(--color-gray-100)]" : ""}`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            {showNewPurchase ? "إغلاق نموذج الشراء" : "تسجيل فاتورة شراء جديدة"}
+            {showNewPurchase ? t("suppliers.close_purchase_form") : t("suppliers.new_purchase_invoice")}
           </button>
 
           {showNewPurchase && (
@@ -138,7 +138,7 @@ export function SupplierDetail({ supplierId, supplierName, onClose }: Props) {
                 onDone={() => {
                   setShowNewPurchase(false);
                   triggerRefresh();
-                  toast.success("تم تسجيل فاتورة الشراء بنجاح");
+                  toast.success(t("suppliers.purchaseSuccess"));
                 }}
               />
             </motion.div>
@@ -147,7 +147,7 @@ export function SupplierDetail({ supplierId, supplierName, onClose }: Props) {
           {/* Purchase History Table */}
           <div className="yc-card p-0">
             <div className="border-b border-[var(--border-light)] p-4">
-              <h3 className="font-semibold text-[var(--text-primary)]">سجل الفواتير</h3>
+              <h3 className="font-semibold text-[var(--text-primary)]">{t("suppliers.invoice_history")}</h3>
             </div>
             {purchases.isLoading ? (
               <div className="flex h-40 items-center justify-center">
@@ -155,17 +155,17 @@ export function SupplierDetail({ supplierId, supplierName, onClose }: Props) {
               </div>
             ) : purchases.error ? (
               <div className="p-8 text-center text-[var(--color-danger-600)]">
-                حدث خطأ أثناء جلب الفواتير: {purchases.error}
+                {t("suppliers.fetch_invoice_error", { error: purchases.error })}
               </div>
             ) : (
               <div className="overflow-auto">
                 <table className="yc-table">
                   <thead>
                     <tr>
-                      <th>التاريخ</th>
-                      <th>الإجمالي</th>
-                      <th>المدفوع</th>
-                      <th>الحالة</th>
+                      <th>{t("suppliers.col_date")}</th>
+                      <th>{t("suppliers.col_total")}</th>
+                      <th>{t("suppliers.col_paid")}</th>
+                      <th>{t("suppliers.col_status")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -177,8 +177,8 @@ export function SupplierDetail({ supplierId, supplierName, onClose }: Props) {
                         animate={{ opacity: 1 }}
                       >
                         <td className="text-[var(--text-secondary)]">{p.purchaseDate}</td>
-                        <td className="font-medium text-[var(--text-primary)]">{p.totalAmount} د.أ</td>
-                        <td className="text-[var(--text-secondary)]">{p.amountPaid} د.أ</td>
+                        <td className="font-medium text-[var(--text-primary)]">{p.totalAmount} {t("reports.currency")}</td>
+                        <td className="text-[var(--text-secondary)]">{p.amountPaid} {t("reports.currency")}</td>
                         <td>
                           <span className={`yc-badge ${getStatusBadgeClass(p.status)}`}>
                             {translateStatus(p.status)}
@@ -189,7 +189,7 @@ export function SupplierDetail({ supplierId, supplierName, onClose }: Props) {
                     {!purchases.isLoading && (purchases.data ?? []).length === 0 && (
                       <tr>
                         <td colSpan={4} className="p-8 text-center text-[var(--text-muted)]">
-                          لا توجد فواتير مسجلة لهذا المورّد بعد
+                          {t("suppliers.empty_invoices")}
                         </td>
                       </tr>
                     )}
