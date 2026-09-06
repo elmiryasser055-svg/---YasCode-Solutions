@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useIsOwner, useAuthStore } from "../../store/authStore";
 import { confirm } from "../../store/confirmStore";
 import type { Screen } from "../../App";
+import imageLogo from "../../../../public/assets/YasStor.png";
+import Logo from "../../../../public/assets/logo.png";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import {
   Store,
@@ -109,32 +111,17 @@ export function Sidebar({ active, onNavigate }: Props) {
     >
       {/* Header / Logo */}
       <div
-        className="flex items-center gap-3 border-b p-4"
+        className="flex items-center gap-3 border-b "
         style={{ borderColor: "var(--border-light)" }}
       >
-        <div
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)]"
-          style={{
-            background:
-              "linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700))",
-            boxShadow: "0 2px 8px rgb(160 20 73 / 0.25)",
-          }}
-        >
-          <Store className="h-5 w-5 text-white" strokeWidth={1.5} />
-        </div>
-        <div
-          className="min-w-0 overflow-hidden"
-          style={{
-            opacity: collapsed ? 0 : 1,
-            width: collapsed ? 0 : "auto",
-            transition: "opacity var(--transition-fast), width var(--transition-normal)",
-          }}
-        >
-          <h1 className="whitespace-nowrap text-sm font-bold text-[var(--text-primary)]">
-            YasCode
-          </h1>
-          <p className="whitespace-nowrap text-[10px] text-[var(--text-muted)]">Supérette</p>
-        </div>
+
+      
+        <img
+          src={!collapsed ? imageLogo : Logo}
+          alt="Logo"
+          className=" flex-shrink-0"
+        />
+       
       </div>
 
       {/* Toggle collapse/expand + Toggle theme */}
