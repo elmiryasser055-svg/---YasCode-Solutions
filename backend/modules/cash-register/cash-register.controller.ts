@@ -14,19 +14,19 @@ import {
 import * as cashRegisterService from "./cash-register.service";
 
 export const openSessionController = requireAuth(
-  requireRole(["owner"], async (input, session) =>
+   async (input, session) =>
     withValidation(openSessionSchema, (validInput) =>
       cashRegisterService.openSession(validInput, session)
     )(input)
-  )
+  
 );
 
 export const closeSessionController = requireAuth(
-  requireRole(["owner"], async (input, session) =>
+   async (input, session) =>
     withValidation(closeSessionSchema, (validInput) =>
       cashRegisterService.closeSession(validInput, session)
     )(input)
-  )
+  
 );
 
 export const recordExpenseController = requireAuth(

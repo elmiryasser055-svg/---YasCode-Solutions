@@ -22,9 +22,11 @@ interface Props {
   results: ProductResult[];
   loading: boolean;
   error: string | null;
+  disabled?: boolean;
 }
 
 export function SearchBar({
+  disabled,
   query,
   onQueryChange,
   onSelect,
@@ -61,6 +63,8 @@ export function SearchBar({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // إذا لم تكن هناك نتائج أو القائمة مغلقة، وقام المستخدم (أو القارئ) بالضغط على Enter
+      // نقوم بإضافة النص المكتوب (الباركود) كمنتج مباشرة
       if (!open || results.length === 0) {
         if (e.key === "Enter" && query.trim()) {
           e.preventDefault();
@@ -68,6 +72,8 @@ export function SearchBar({
         }
         return;
       }
+      
+      // التنقل بين النتائج إذا كانت موجودة
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setHighlighted((i) => Math.min(i + 1, results.length - 1));
@@ -75,6 +81,7 @@ export function SearchBar({
         e.preventDefault();
         setHighlighted((i) => Math.max(i - 1, 0));
       } else if (e.key === "Enter") {
+        // إذا وُجدت نتائج والضغط على Enter، اختر النتيجة المظللة (أول نتيجة عادةً)
         e.preventDefault();
         const picked = results[highlighted];
         if (picked) handleSelect(picked);
@@ -97,7 +104,7 @@ export function SearchBar({
   return (
     <div className="relative">
       {/* Search Input */}
-      <div className="flex items-center gap-2 rounded-2xl border-2 border-[var(--border-light)] bg-[var(--bg-card)] p-2 shadow-sm transition-all focus-within:border-[var(--color-primary-400)] focus-within:shadow-md">
+      <div className="flex  items-center gap-2 rounded-2xl border-2 border-[var(--border-light)] bg-[var(--bg-card)] p-2 shadow-sm transition-all focus-within:border-[var(--color-primary-400)] focus-within:shadow-md">
         <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-primary-50)] text-[var(--color-primary-600)]">
           {query.trim() ? (
             <ScanBarcode className="h-5 w-5" strokeWidth={2} />
@@ -109,12 +116,14 @@ export function SearchBar({
           ref={inputRef}
           type="text"
           value={query}
+           disabled={disabled}
           onChange={(e) => onQueryChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t("searchBar.placeholder")}
           className="min-w-0 flex-1 bg-transparent text-base font-bold text-[var(--text-primary)] outline-none placeholder:font-normal placeholder:text-[var(--text-muted)]"
           autoComplete="off"
-          data-barcode-ignore="true"
+          autoFocus // ⭐ التركيز التلقائي على حقل البحث عند فتح الشاشة (مهم لقارئ الباركود)
+          data-search-input="true" // ⭐ لكي يعثر عليه اختصار F2 في SaleScreen.tsx
         />
         {query.trim() && !loading && (
           <button

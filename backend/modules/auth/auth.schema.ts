@@ -22,3 +22,10 @@ export const updateCredentialsSchema = z.object({
   message: "يجب إدخال اسم مستخدم جديد أو كلمة مرور جديدة على الأقل.",
 });
 export type UpdateCredentialsInput = z.infer<typeof updateCredentialsSchema>;
+
+export const setupInitialOwnerSchema = z.object({
+  username: z.string().min(3).max(50),
+  password: z.string().min(8).max(100),
+  fullName: z.string().min(2).max(100),
+});
+export type SetupInitialOwnerInput = z.infer<typeof setupInitialOwnerSchema>;

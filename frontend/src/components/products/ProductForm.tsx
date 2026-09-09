@@ -87,7 +87,7 @@ export function ProductForm({ initial, onDone, onClose }: Props) {
   }
 
   return (
-    <div className="yc-card h-full flex flex-col">
+    <div className="yc-card flex flex-col max-h-[90vh] overflow-hidden rounded-2xl">
       <div className="flex justify-between items-start mb-6">
         <div>
           <h3 className="font-bold text-lg text-[var(--text-primary)]">

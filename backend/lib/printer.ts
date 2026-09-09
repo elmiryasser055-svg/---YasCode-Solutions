@@ -1,36 +1,40 @@
 // lib/printer.ts
-// طبقة تجريد فوق مكتبة الطباعة الحرارية — بقية الموديولات (sales, inventory)
-// لا تتعامل مع node-thermal-printer مباشرة، بل عبر هذه الدوال، حتى يسهل
-// استبدال المكتبة لاحقًا دون تغيير أي منطق عمل.
-
-import { ThermalPrinter, PrinterTypes } from "node-thermal-printer";
+import { ThermalPrinter, PrinterTypes, CharacterSet } from "node-thermal-printer";
 import { logger } from "./logger";
 
 let printerInstance: ThermalPrinter | null = null;
 let configuredInterface: string | null = null;
 
-/**
- * ⭐ يسدّ فجوة: كان اسم الطابعة يُحفظ في app_settings (موديول settings) لكن
- * بلا أي أثر فعلي هنا — هذا الملف كان يستخدم دائمًا "usb" ثابتًا في الكود.
- * الآن printing.service.ts يستدعي هذه الدالة بقيمة الإعداد الفعلية قبل كل
- * طباعة. القيمة الفارغة (لم يضبط المالك شيئًا بعد) تعني الاعتماد على الاكتشاف
- * التلقائي القياسي لأول طابعة USB متوافقة.
- */
+// File d'attente simple : garantit qu'une seule impression écrit dans le buffer à la fois.
+let printQueue: Promise<void> = Promise.resolve();
+
+function enqueuePrintJob<T>(job: () => Promise<T>): Promise<T> {
+  const result = printQueue.then(job, job);
+  // On avale l'erreur ici pour ne pas bloquer les impressions suivantes,
+  // mais on la laisse remonter au caller via `result`.
+  printQueue = result.then(
+    () => undefined,
+    () => undefined
+  );
+  return result;
+}
+
 export function configurePrinter(interfaceName?: string) {
   const targetInterface = interfaceName && interfaceName.trim() !== "" ? interfaceName : "usb";
-
-  // لا داعي لإعادة إنشاء الكائن إن لم يتغيّر شيء — تجنّب فتح اتصال جديد بالطابعة بلا سبب
   if (printerInstance && configuredInterface === targetInterface) return;
 
   printerInstance = new ThermalPrinter({
-    type: PrinterTypes.EPSON, // متوافق مع أغلب طابعات ESC/POS الشائعة
+    type: PrinterTypes.EPSON,
     interface: targetInterface,
+    // Pas de contenu arabe sur les tickets : charset latin standard,
+    // pris en charge nativement par la quasi-totalité des imprimantes ESC/POS.
+    characterSet: CharacterSet.PC850_MULTILINGUAL,
   });
   configuredInterface = targetInterface;
 }
 
 export function getPrinter(): ThermalPrinter {
-  if (!printerInstance) configurePrinter(); // افتراضي "usb" إن لم يُستدعَ configurePrinter من قبل بعد
+  if (!printerInstance) configurePrinter();
   return printerInstance!;
 }
 
@@ -44,50 +48,90 @@ export interface TicketData {
   createdAt: string;
 }
 
-export async function printSaleTicket(data: TicketData): Promise<void> {
-  const printer = getPrinter();
+// Formatage monétaire cohérent (évite les artefacts de virgule flottante type 59.699999999999996).
+function money(n: number): string {
+  return n.toFixed(2);
+}
 
-  try {
-    const isConnected = await printer.isPrinterConnected();
-    if (!isConnected) {
-      throw new Error("الطابعة غير متصلة."); // يُلتقط بواسطة ipcErrorHandler ويُعرض برسالة عامة آمنة أعلى مستوى
-    }
+// Découpe un nom de produit trop long pour éviter un rendu cassé sur les imprimantes
+// à largeur réduite (souvent 32 ou 42 caractères).
+function wrapText(text: string, maxWidth = 32): string[] {
+  if (text.length <= maxWidth) return [text];
+  const lines: string[] = [];
+  let remaining = text;
+  while (remaining.length > maxWidth) {
+    lines.push(remaining.slice(0, maxWidth));
+    remaining = remaining.slice(maxWidth);
+  }
+  if (remaining.length > 0) lines.push(remaining);
+  return lines;
+}
 
-    printer.alignCenter();
-    printer.println("YasCode Store");
-    printer.drawLine();
-    printer.alignLeft();
-    printer.println(`رقم الفاتورة: ${data.saleNumber}`);
-    printer.println(`الكاشير: ${data.cashierName}`);
-    printer.println(`التاريخ: ${data.createdAt}`);
-    printer.drawLine();
-
-    for (const item of data.items) {
-      printer.println(`${item.name}`);
-      printer.println(`  ${item.quantity} × ${item.unitPrice} = ${item.lineTotal}`);
-    }
-
-    printer.drawLine();
-    printer.println(`المجموع الفرعي: ${data.subtotal}`);
-    if (data.discount > 0) printer.println(`الخصم: ${data.discount}`);
-    printer.bold(true);
-    printer.println(`الإجمالي: ${data.total}`);
-    printer.bold(false);
-    printer.cut();
-
-    await printer.execute();
-  } catch (err) {
-    logger.error("فشل طباعة التذكرة", err);
-    throw err; // يُعالَج ويُحوَّل لرسالة آمنة في middleware/ipcErrorHandler.ts
+async function ensureConnected(printer: ThermalPrinter): Promise<void> {
+  const isConnected = await printer.isPrinterConnected();
+  if (!isConnected) {
+    throw new Error("Imprimante non connectée.");
   }
 }
 
-/** طباعة ملصق باركود (نفس الطابعة الحرارية، حسب القرار المعتمد) */
-export async function printBarcodeLabel(barcodeImageBuffer: Buffer, productName: string) {
-  const printer = getPrinter();
-  printer.alignCenter();
-  printer.println(productName);
-  printer.printImageBuffer(barcodeImageBuffer);
-  printer.cut();
-  await printer.execute();
+export async function printSaleTicket(data: TicketData): Promise<void> {
+  return enqueuePrintJob(async () => {
+    const printer = getPrinter();
+    try {
+      await ensureConnected(printer);
+
+      printer.alignCenter();
+      printer.println("YasCode Store");
+      printer.drawLine();
+      printer.alignLeft();
+      printer.println(`Facture N: ${data.saleNumber}`);
+      printer.println(`Caissier: ${data.cashierName}`);
+      printer.println(`Date: ${data.createdAt}`);
+      printer.drawLine();
+
+      for (const item of data.items) {
+        for (const line of wrapText(item.name)) {
+          printer.println(line);
+        }
+        printer.println(`  ${item.quantity} x ${money(item.unitPrice)} = ${money(item.lineTotal)}`);
+      }
+
+      printer.drawLine();
+      printer.println(`Sous-total: ${money(data.subtotal)}`);
+      if (data.discount > 0) printer.println(`Remise: ${money(data.discount)}`);
+      printer.bold(true);
+      printer.println(`Total: ${money(data.total)}`);
+      printer.bold(false);
+      printer.cut();
+
+      await printer.execute();
+    } catch (err) {
+      logger.error("Échec de l'impression du ticket", err);
+      // Empêche le contenu partiel de "coller" à la prochaine impression.
+      printer.clear();
+      throw err;
+    }
+  });
+}
+
+export async function printBarcodeLabel(barcodeImageBuffer: Buffer, productName: string): Promise<void> {
+  return enqueuePrintJob(async () => {
+    const printer = getPrinter();
+    try {
+      await ensureConnected(printer);
+
+      printer.alignCenter();
+      for (const line of wrapText(productName)) {
+        printer.println(line);
+      }
+      printer.printImageBuffer(barcodeImageBuffer);
+      printer.cut();
+
+      await printer.execute();
+    } catch (err) {
+      logger.error("Échec de l'impression de l'étiquette", err);
+      printer.clear();
+      throw err;
+    }
+  });
 }

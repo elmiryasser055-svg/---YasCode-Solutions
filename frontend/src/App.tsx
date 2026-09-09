@@ -19,7 +19,11 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "./store/authStore";
 import { useCashRegisterStore } from "./store/cashRegisterStore";
+import { unwrap } from "./lib/ipcClient"; // ⭐ استيراد unwrap
+
 import { LoginScreen } from "./components/layout/LoginScreen";
+import SetupScreen from "./components/layout/SetupScreen"; // ⭐ استيراد شاشة الإعداد
+
 import { Sidebar } from "./components/layout/Sidebar";
 import { LanguageSwitcher } from "./components/layout/LanguageSwitcher";
 import { ConfirmDialogHost } from "./components/layout/ConfirmDialogHost";
@@ -104,6 +108,19 @@ export default function App() {
   const [screenKey, setScreenKey] = useState(0);
   const prevScreen = useRef<Screen>("pos");
 
+  // ⭐ حالة فحص الإعداد الأولي للنظام
+  const [isInitialized, setIsInitialized] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    // فحص ما إذا كان النظام تم إعداده أم لا عند الإقلاع
+    unwrap(window.api.auth.isInitialized())
+      .then((res) => setIsInitialized(res.isInitialized))
+      .catch(() => {
+        // في حال حدوث خطأ غير متوقع، نعتبر النظام مهيأً لتفادي حجب المستخدم
+        setIsInitialized(true);
+      });
+  }, []);
+
   useEffect(() => {
     if (isAuthenticated) refreshCashRegister();
   }, [isAuthenticated, refreshCashRegister]);
@@ -115,8 +132,24 @@ export default function App() {
     setScreenKey((k) => k + 1);
   };
 
+  // ⭐ 1. أثناء فحص حالة النظام (شاشة تحميل)
+  if (isInitialized === null) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[var(--bg-body)]">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--border-light)] border-t-[var(--color-primary-600)]"></div>
+      </div>
+    );
+  }
+
+  // ⭐ 2. إذا لم يتم إعداد النظام (لا يوجد مستخدمين)، اعرض شاشة الإعداد
+  if (!isInitialized) {
+    return <SetupScreen />;
+  }
+
+  // ⭐ 3. إذا لم يسجل المستخدم الدخول، اعرض شاشة تسجيل الدخول
   if (!isAuthenticated) return <LoginScreen />;
 
+  // 4. التطبيق الرئيسي
   const ActiveComponent = SCREENS[activeScreen];
   const ActiveIcon = SCREEN_ICONS[activeScreen];
 
@@ -134,39 +167,11 @@ export default function App() {
 
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        {/* <header className="flex items-center justify-between border-b border-[var(--border-light)] bg-[var(--bg-card)] px-6 py-3.5 shadow-[var(--shadow-xs)]">
-          <div className="flex items-center gap-3.5 animate-fade-in-down">
-            <div
-              className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)]"
-              style={{
-                background: "linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700))",
-                boxShadow: "0 2px 8px rgb(37 99 235 / 0.25)",
-              }}
-            >
-              <ActiveIcon className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex flex-col">
-              <h2 className="text-base font-bold leading-tight text-[var(--text-primary)]">
-                {t(`app.screen.${activeScreen}`)}
-              </h2>
-              <p className="text-xs text-[var(--text-muted)]">
-                {t(`app.subtitle.${activeScreen}`)}
-              </p>
-            </div>
-            {activeScreen === "pos" && (
-              <span className="yc-badge yc-badge-green gap-1.5">
-                <Circle className="h-2 w-2 animate-pulse-soft fill-current" />
-                {t("app.activeSession")}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <LiveClock />
-            <div className="h-8 w-px bg-[var(--border-light)]" />
-            <LanguageSwitcher />
-          </div>
-        </header> */}
+        {/* تم تعليق الهيدر كما في الكود الأصلي الخاص بك
+        <header className="flex items-center justify-between border-b border-[var(--border-light)] bg-[var(--bg-card)] px-6 py-3.5 shadow-[var(--shadow-xs)]">
+          ...
+        </header>
+        */}
 
         {/* Main Content */}
         <main

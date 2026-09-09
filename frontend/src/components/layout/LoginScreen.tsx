@@ -13,6 +13,8 @@ import {
   EyeOff,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+//@ts-ignore
+import logo from "../../../../public/assets/logo.png";
 
 export function LoginScreen() {
   const { t } = useTranslation();
@@ -47,7 +49,7 @@ export function LoginScreen() {
       <div className="relative z-10 w-full max-w-md">
         {/* Logo / Brand */}
         <div className="mb-8 text-center animate-fade-in-down">
-          <div
+          {/* <div
             className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-[var(--radius-xl)]"
             style={{
               background:
@@ -56,10 +58,9 @@ export function LoginScreen() {
             }}
           >
             <Store className="h-10 w-10 text-[var(--text-inverse)]" strokeWidth={1.5} />
-          </div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">
-            YasCode Supérette
-          </h1>
+          </div> */}
+          <img src={logo} alt="YasStore Logo" className="mx-auto mb-4 h-auto w-60" />
+         
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
             {t("loginScreen.subtitle")}
           </p>
@@ -164,20 +165,7 @@ export function LoginScreen() {
             </button>
           </form>
 
-          {/* Demo hint */}
-          <div
-            className="mt-6 flex items-center justify-center gap-2 rounded-[var(--radius-md)] border p-3 text-center text-xs"
-            style={{
-              borderColor: "var(--color-primary-100)",
-              background: "var(--color-primary-50)",
-              color: "var(--color-primary-700)",
-            }}
-          >
-            <Info className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
-            <span>
-              <span className="font-bold">{t("loginScreen.demoHintLabel")}</span> {t("loginScreen.demoHintValue")}
-            </span>
-          </div>
+    
         </div>
 
         {/* Footer */}

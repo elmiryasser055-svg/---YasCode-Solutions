@@ -10,6 +10,7 @@ YasCode-Supperette-Project
 │  │  ├─ barcodeGenerator.ts
 │  │  ├─ db.ts
 │  │  ├─ env.ts
+│  │  ├─ licenseCrypto.ts
 │  │  ├─ logger.ts
 │  │  ├─ printer.ts
 │  │  └─ rateLimit.ts
@@ -48,6 +49,11 @@ YasCode-Supperette-Project
 │  │  │  ├─ inventory.schema.ts
 │  │  │  ├─ inventory.service.test.ts
 │  │  │  └─ inventory.service.ts
+│  │  ├─ licensing
+│  │  │  ├─ licensing.controller.ts
+│  │  │  ├─ licensing.ipc.ts
+│  │  │  ├─ licensing.schema.ts
+│  │  │  └─ licensing.service.ts
 │  │  ├─ printing
 │  │  │  ├─ printing.controller.ts
 │  │  │  ├─ printing.ipc.ts
@@ -103,8 +109,10 @@ YasCode-Supperette-Project
 ├─ drizzle
 │  └─ migrations
 │     ├─ 0000_workable_lady_vermin.sql
+│     ├─ 0001_woozy_network.sql
 │     └─ meta
 │        ├─ 0000_snapshot.json
+│        ├─ 0001_snapshot.json
 │        └─ _journal.json
 ├─ drizzle.config.ts
 ├─ e2e
@@ -131,15 +139,23 @@ YasCode-Supperette-Project
 │     │  │  ├─ ConfirmDialogHost.tsx
 │     │  │  ├─ ErrorBoundary.tsx
 │     │  │  ├─ LanguageSwitcher.tsx
+│     │  │  ├─ LicenseGate.tsx
 │     │  │  ├─ LoginScreen.tsx
+│     │  │  ├─ Modal.tsx
+│     │  │  ├─ SetupScreen.tsx
 │     │  │  ├─ Sidebar.test.tsx
 │     │  │  └─ Sidebar.tsx
 │     │  ├─ Nouveau dossier
 │     │  ├─ pos
+│     │  │  ├─ CartPanel.tsx
+│     │  │  ├─ CreateProductModal.tsx
 │     │  │  ├─ EditSaleForm.tsx
+│     │  │  ├─ LastSaleItemsTable.tsx
+│     │  │  ├─ PaymentPanel.tsx
 │     │  │  ├─ QuickProducts.tsx
 │     │  │  ├─ ReturnForm.tsx
-│     │  │  └─ SaleScreen.tsx
+│     │  │  ├─ SaleScreen.tsx
+│     │  │  └─ SearchBar.tsx
 │     │  ├─ products
 │     │  │  ├─ ProductForm.tsx
 │     │  │  └─ ProductsScreen.tsx
@@ -169,6 +185,8 @@ YasCode-Supperette-Project
 │     │     └─ fr.json
 │     ├─ lib
 │     │  ├─ ipcClient.ts
+│     │  ├─ productAvailability.ts
+│     │  ├─ sound.ts
 │     │  ├─ toast.tsx
 │     │  └─ utils.ts
 │     ├─ main.tsx
@@ -183,13 +201,20 @@ YasCode-Supperette-Project
 │     │  ├─ EXAMPLE.md
 │     │  ├─ globals.css
 │     │  └─ README.md
-│     └─ test-setup.ts
+│     ├─ test-setup.ts
+│     └─ utils
+│        └─ licenseCrypto.ts
 ├─ logs
 ├─ package-lock.json
 ├─ package.json
 ├─ playwright.config.ts
 ├─ postcss.config.js
 ├─ ProjectAnalysis.md
+├─ public
+│  └─ assets
+│     ├─ file_000000009ecc8210a882899bb6d89444.png
+│     ├─ logo.png
+│     └─ YasStor.png
 ├─ README.md
 ├─ RUNNING.md
 ├─ schemaDB.md
@@ -199,6 +224,7 @@ YasCode-Supperette-Project
 ├─ tailwind.config.js
 ├─ tsconfig.electron.json
 ├─ tsconfig.json
+├─ usb
 ├─ vite.config.mts
 └─ vitest.workspace.ts
 

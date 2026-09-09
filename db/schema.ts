@@ -431,3 +431,15 @@ export const purchaseItemsRelations = relations(purchaseItems, ({ one }) => ({
     references: [products.id],
   }),
 }));
+
+
+
+export const licenseTable = sqliteTable("license", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  licenseKey: text("license_key").notNull(),
+  clientId: text("client_id").notNull(),
+  clientName: text("client_name").notNull(),
+  activatedAt: text("activated_at").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  lastSeenAt: text("last_seen_at").notNull(),
+});

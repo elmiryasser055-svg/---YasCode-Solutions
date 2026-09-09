@@ -13,6 +13,8 @@ import { registerPrintingIpcHandlers } from "./printing/printing.ipc";
 import { registerSettingsIpcHandlers } from "./settings/settings.ipc";
 import { registerReturnsIpcHandlers } from "./returns/returns.ipc";
 import { registerCategoriesIpcHandlers } from "./categories/categories.ipc";
+import { registerLicensingIpcHandlers } from "./licensing/licensing.ipc";
+
 import { registerBackupIpcHandlers } from "./backup/backup.ipc";
 
 export function registerAllIpcHandlers() {
@@ -29,4 +31,5 @@ export function registerAllIpcHandlers() {
   registerReturnsIpcHandlers();
   registerCategoriesIpcHandlers();
   registerBackupIpcHandlers();
+  registerLicensingIpcHandlers();
 }

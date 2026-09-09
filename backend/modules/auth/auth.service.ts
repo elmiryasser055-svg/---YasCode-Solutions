@@ -1,12 +1,12 @@
 // modules/auth/auth.service.ts
-import { eq } from "drizzle-orm";
+import { eq , count} from "drizzle-orm";
 import { getDb } from "../../lib/db";
 import { users, auditLog } from "../../../db/schema";
 import { hashPassword, verifyPassword, createSession, clearSession, type Session } from "../../lib/auth";
 import { assertNotRateLimited, recordFailedAttempt, clearAttempts } from "../../lib/rateLimit";
 
 import { UnauthorizedError, ForbiddenError, NotFoundError, BusinessRuleError } from "../../middleware/errors";
-import type { LoginInput, CreateUserInput, UpdateCredentialsInput } from "./auth.schema";
+import type { LoginInput, CreateUserInput, UpdateCredentialsInput  , SetupInitialOwnerInput} from "./auth.schema";
 
 export async function login(input: LoginInput): Promise<Session> {
   assertNotRateLimited(input.username);
@@ -100,6 +100,46 @@ export async function updateCredentials(input: UpdateCredentialsInput, session: 
   if (Object.keys(updateData).length > 0) {
     await db.update(users).set(updateData).where(eq(users.id, session.userId));
   }
+
+  return { success: true };
+}
+
+
+
+export async function isSystemInitialized(): Promise<boolean> {
+  const db = getDb();
+  const result = await db.select({ value: count() }).from(users);
+  return (result[0]?.value ?? 0) > 0;
+}
+
+export async function setupInitialOwner(input: SetupInitialOwnerInput) {
+  const db = getDb();
+  
+  // حماية حرجة: إذا وُجد أي مستخدم، نرفض العملية تماماً
+  if (await isSystemInitialized()) {
+    throw new ForbiddenError("النظام تم إعداده مسبقاً. لا يمكن إنشاء حساب مسؤول جديد.");
+  }
+
+  const passwordHash = await hashPassword(input.password);
+
+  const [created] = await db
+    .insert(users)
+    .values({
+      username: input.username,
+      passwordHash,
+      fullName: input.fullName,
+      role: "owner", // إجبار الدور كـ owner
+    })
+    .returning();
+
+  // تسجيل العملية في سجل التدقيق
+  await db.insert(auditLog).values({
+    userId: created.id,
+    action: "user_create",
+    entityType: "user",
+    entityId: created.id,
+    newValue: JSON.stringify({ username: input.username, role: "owner", initialSetup: true }),
+  });
 
   return { success: true };
 }

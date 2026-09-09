@@ -105,6 +105,16 @@
     "noReason": "Aucune"
   },
   "saleScreen": {
+    "stopScanMode": "Arrêter le mode scan",
+    "startScanMode": "Démarrer le mode scan direct",
+    "scanModeEnabled": "Mode scan activé",
+    "enableScanMode": "Activer le mode scan",
+    "disableAutoPrint": "Désactiver l'impression auto",
+    "enableAutoPrint": "Activer l'impression auto",
+    "autoPrintOn": "Impression auto activée",
+    "autoPrintOff": "Impression auto désactivée",
+    "scanModeActiveHint": "Le mode scan direct est activé. Pointez le lecteur vers le produit pour l'ajouter automatiquement au panier."
+  ,
     "notFoundBarcode": "Aucun produit trouvé avec le code-barres :",
     "noResultsFor": "Aucun résultat pour :",
     "searchError": "Erreur lors de la recherche du produit, réessayez.",
@@ -447,5 +457,19 @@
     "password_placeholder": "8 caractères minimum",
     "creating": "Création...",
     "create_cashier": "Créer un compte caissier"
-  }
+  },
+  "createProductModal": {
+  "title": "Ajouter un nouveau produit rapidement",
+  "name": "Nom du produit",
+  "barcode": "Code-barres",
+  "category": "Catégorie",
+  "noCategory": "Pas de catégorie",
+  "sellingPrice": "Prix de vente",
+  "purchasePrice": "Prix d'achat",
+  "unitType": "Type de vente",
+  "saveAndAdd": " sauvegarder et ajouter au panier",
+  "success": "Produit créé et ajouté avec succès",
+  "nameRequired": "Le nom du produit est requis",
+  "priceRequired": "Veuillez entrer un prix de vente valide"
+}
 }

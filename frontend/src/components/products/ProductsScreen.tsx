@@ -20,8 +20,9 @@ export function ProductsScreen() {
   const [labelCopies, setLabelCopies] = useState<Record<number, number>>({});
   const [csvStatus, setCsvStatus] = useState<string | null>(null);
 
+  // تم التعديل: إزالة "a" وجعلها نص فارغ لجلب كل المنتجات
   const products = useIpcQuery(
-    () => api().products.search({ query: query || "a", page, pageSize: PAGE_SIZE }),
+    () => api().products.search({ query: query || "", page, pageSize: PAGE_SIZE }),
     [query, page]
   );
 
@@ -85,7 +86,7 @@ export function ProductsScreen() {
   const totalPages = products.data?.totalPages ?? 1;
 
   return (
-    <div className="flex h-full gap-6 p-6">
+    <div className="relative flex h-full gap-6 p-6">
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <motion.div 
@@ -162,14 +163,13 @@ export function ProductsScreen() {
                   </tr>
                 </thead>
                 <tbody>
-                  <AnimatePresence mode="popLayout">
+                  <AnimatePresence>
                     {(products.data?.items ?? []).map((p: any, index) => (
                       <motion.tr
                         key={p.id}
-                        layout
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
                         transition={{ duration: 0.2, delay: index * 0.01 }}
                       >
                         <td className="font-medium text-[var(--text-primary)]">{p.name}</td>
@@ -218,7 +218,7 @@ export function ProductsScreen() {
                     ))}
                   </AnimatePresence>
                   
-                  {!products.isLoading && (products.data?.items.length ?? 0) === 0 && (
+                  {!products.isLoading && (products.data?.items?.length ?? 0) === 0 && (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-[var(--text-muted)]">
                         {t("productsScreen.noResults")}
@@ -257,17 +257,28 @@ export function ProductsScreen() {
         )}
       </div>
 
-      {/* Sidebar for Product Form */}
+      {/* Modal for Product Form */}
       <AnimatePresence>
         {(showNewForm || editingProduct) && (
-          <motion.aside
-            initial={{ x: 50, opacity: 0, width: 0 }}
-            animate={{ x: 0, opacity: 1, width: 400 }}
-            exit={{ x: 50, opacity: 0, width: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="overflow-hidden"
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => {
+              setShowNewForm(false);
+              setEditingProduct(null);
+            }}
           >
-            <div className="w-[400px] h-full">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="relative w-full max-w-2xl max-h-[90vh] rounded-2xl shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
               <ProductForm
                 initial={editingProduct ?? undefined}
                 onDone={() => {
@@ -280,8 +291,8 @@ export function ProductsScreen() {
                   setEditingProduct(null);
                 }}
               />
-            </div>
-          </motion.aside>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

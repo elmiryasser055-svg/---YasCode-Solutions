@@ -1,4 +1,4 @@
-// modules/auth/auth.ipc.ts
+// backend/modules/auth/auth.ipc.ts
 // يكافئ route.ts في REST API: تعريف "المسارات" (هنا: قنوات IPC) وربطها بالـ controllers.
 
 import { ipcMain } from "electron";
@@ -17,7 +17,23 @@ export function registerAuthIpcHandlers() {
   ipcMain.handle("auth:createUser", (_event, input) =>
     withErrorHandling("auth:createUser", controller.createUserController)(input)
   );
-    ipcMain.handle("auth:updateCredentials", (_event, input) =>
+
+  ipcMain.handle("auth:updateCredentials", (_event, input) =>
     withErrorHandling("auth:updateCredentials", controller.updateCredentialsController)(input)
+  );
+
+  // ⭐ قنوات الإعداد الأولي
+  ipcMain.handle("auth:isInitialized", (_event) =>
+    withErrorHandling(
+      "auth:isInitialized",
+      controller.checkSystemInitializedController
+    )(undefined as never)
+  );
+
+  ipcMain.handle("auth:setupInitial", (_event, input) =>
+    withErrorHandling(
+      "auth:setupInitial",
+      controller.setupInitialOwnerController
+    )(input)
   );
 }

@@ -15,7 +15,10 @@ contextBridge.exposeInMainWorld("api", {
     login: (input: unknown) => invoke("auth:login", input),
     logout: () => invoke("auth:logout"),
     createUser: (input: unknown) => invoke("auth:createUser", input),
-     updateCredentials: (input: unknown) => invoke("auth:updateCredentials", input),
+    updateCredentials: (input: unknown) => invoke("auth:updateCredentials", input),
+    // ⭐ الإضافات الجديدة لشاشة الإعداد الأولي
+    isInitialized: () => invoke("auth:isInitialized"),
+    setupInitial: (input: unknown) => invoke("auth:setupInitial", input),
   },
   products: {
     create: (input: unknown) => invoke("products:create", input),
@@ -64,13 +67,12 @@ contextBridge.exposeInMainWorld("api", {
   reports: {
     getProfitTrend: (input: unknown) => invoke("reports:getProfitTrend", input),
     getTodaySummary: () => invoke("reports:getTodaySummary"),
-         getBestSellers: (input: unknown) => invoke("reports:getBestSellers", input),
+    getBestSellers: (input: unknown) => invoke("reports:getBestSellers", input),
     getDeadStock: (input: unknown) => invoke("reports:getDeadStock", input),
   },
   printing: {
     printSaleTicket: (input: unknown) => invoke("printing:printSaleTicket", input),
     printBarcodeLabel: (input: unknown) => invoke("printing:printBarcodeLabel", input),
-
   },
   settings: {
     get: (input: unknown) => invoke("settings:get", input),
@@ -90,5 +92,9 @@ contextBridge.exposeInMainWorld("api", {
   backup: {
     list: () => invoke("backup:list"),
     restore: (input: unknown) => invoke("backup:restore", input),
+  },
+  license: {
+    getStatus: () => invoke("license:status"),
+    activate: (input: unknown) => invoke("license:activate", input),
   },
 });

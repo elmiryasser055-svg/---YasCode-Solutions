@@ -105,6 +105,15 @@
     "noReason": "لا يوجد"
   },
   "saleScreen": {
+        "stopScanMode": "إيقاف وضع المسح",
+    "startScanMode": "بدء وضع المسح المباشر",
+    "scanModeEnabled": "وضع المسح مفعل",
+    "enableScanMode": "تفعيل وضع المسح",
+    "disableAutoPrint": "تعطيل الطباعة التلقائية",
+    "enableAutoPrint": "تفعيل الطباعة التلقائية",
+    "autoPrintOn": "الطباعة التلقائية",
+    "autoPrintOff": "تعطيل الطباعة التلقائية",
+    "scanModeActiveHint": "وضع المسح المباشر مفعل. وجّه القارئ نحو المنتج ليُضاف تلقائياً للسلة.",
     "notFoundBarcode": "لم يتم العثور على منتج بالباركود:",
     "noResultsFor": "لا توجد نتائج لـ:",
     "searchError": "خطأ أثناء البحث عن المنتج، حاول مرة أخرى.",
@@ -447,5 +456,19 @@
     "password_placeholder": "8 أحرف على الأقل",
     "creating": "جارٍ الإنشاء...",
     "create_cashier": "إنشاء حساب أمين صندوق"
-  }
+  },
+  "createProductModal": {
+  "title": "إضافة منتج جديد سريع",
+  "name": "اسم المنتج",
+  "barcode": "الباركود",
+  "category": "الفئة",
+  "noCategory": "بدون فئة",
+  "sellingPrice": "سعر البيع",
+  "purchasePrice": "سعر الشراء",
+  "unitType": "نوع البيع",
+  "saveAndAdd": "حفظ وإضافة للسلة",
+  "success": "تم إنشاء المنتج وإضافته بنجاح",
+  "nameRequired": "اسم المنتج مطلوب",
+  "priceRequired": "يجب إدخال سعر بيع صحيح"
+}
 }

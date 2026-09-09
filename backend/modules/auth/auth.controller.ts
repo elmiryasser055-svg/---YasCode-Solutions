@@ -5,7 +5,7 @@
 import { withValidation } from "../../middleware/ipcValidate";
 import { requireAuth } from "../../middleware/ipcAuthGuard";
 import { requireRole } from "../../middleware/ipcAuthorize";
-import { loginSchema, createUserSchema } from "./auth.schema";
+import { loginSchema, createUserSchema , setupInitialOwnerSchema } from "./auth.schema";
 import * as authService from "./auth.service";
 import { updateCredentialsSchema } from "./auth.schema";
 
@@ -30,4 +30,15 @@ export const updateCredentialsController = requireAuth(async (input, session) =>
   withValidation(updateCredentialsSchema, (validInput) =>
     authService.updateCredentials(validInput, session)
   )(input)
+);
+
+
+export const checkSystemInitializedController = async () => {
+  return { isInitialized: await authService.isSystemInitialized() };
+};
+
+// إضافة دالة إنشاء المسؤول الأول
+export const setupInitialOwnerController = withValidation(
+  setupInitialOwnerSchema,
+  async (input) => authService.setupInitialOwner(input)
 );
