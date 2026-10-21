@@ -11,9 +11,16 @@ import { useTranslation } from "react-i18next";
 export function SettingsScreen() {
   const { t } = useTranslation();
   const settings = useIpcQuery(() => api().settings.getAll());
+  
   const [printerName, setPrinterName] = useState("");
   const [expiryWarningDays, setExpiryWarningDays] = useState("30");
   const [language, setLanguage] = useState<"ar" | "fr">("ar");
+
+  const [receiptStoreName, setReceiptStoreName] = useState("");
+  const [receiptPhone, setReceiptPhone] = useState("");
+  const [receiptAddress, setReceiptAddress] = useState("");
+  const [receiptFooter, setReceiptFooter] = useState("");
+  const [receiptWidth, setReceiptWidth] = useState<"80mm" | "58mm">("80mm");
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newUsername, setNewUsername] = useState("");
@@ -25,11 +32,17 @@ export function SettingsScreen() {
       setPrinterName(settings.data.printerName ?? "");
       setExpiryWarningDays(settings.data.expiryWarningDays ?? "30");
       setLanguage((settings.data.language as "ar" | "fr") ?? "ar");
+      
+      setReceiptStoreName(settings.data.receipt_store_name ?? "");
+      setReceiptPhone(settings.data.receipt_phone ?? "");
+      setReceiptAddress(settings.data.receipt_address ?? "");
+      setReceiptFooter(settings.data.receipt_footer ?? "");
+      setReceiptWidth((settings.data.receipt_width as "80mm" | "58mm") ?? "80mm");
     }
   }, [settings.data]);
 
+  // ⭐ إزالة onSuccess من هنا لمنع تكرار الـ Toast
   const setSetting = useIpcMutation(api().settings.set, {
-    onSuccess: () => toast.success(t("settings.saveSuccess")),
     onError: (err) => toast.error(err),
   });
 
@@ -44,13 +57,47 @@ export function SettingsScreen() {
     onError: (err) => toast.error(err),
   });
 
+  // ⭐ Mutation الخاص بمعاينة قالب الفاتورة
+  const previewReceiptMutation = useIpcMutation(api().printing.previewReceiptTemplate, {
+    onError: (err) => toast.error(err),
+  });
+
+  // ⭐ استخدام mutate مع Promise.all للحفظ دفعة واحدة
   async function handleSave() {
-    await setSetting.mutate({ key: "printerName", value: printerName });
-    await setSetting.mutate({ key: "expiryWarningDays", value: expiryWarningDays });
-    await setSetting.mutate({ key: "language", value: language });
-    changeLanguage(language);
-    settings.refetch();
+    try {
+      await Promise.all([
+        setSetting.mutate({ key: "printerName", value: printerName }),
+        setSetting.mutate({ key: "expiryWarningDays", value: expiryWarningDays }),
+        setSetting.mutate({ key: "language", value: language }),
+        setSetting.mutate({ key: "receipt_store_name", value: receiptStoreName }),
+        setSetting.mutate({ key: "receipt_phone", value: receiptPhone }),
+        setSetting.mutate({ key: "receipt_address", value: receiptAddress }),
+        setSetting.mutate({ key: "receipt_footer", value: receiptFooter }),
+        setSetting.mutate({ key: "receipt_width", value: receiptWidth }),
+      ]);
+      
+      changeLanguage(language);
+      toast.success(t("settings.saveSuccess")); // ⭐ رسالة نجاح واحدة فقط
+      settings.refetch();
+    } catch (err) {
+      toast.error(String(err));
+    }
   }
+
+  // ⭐ دالة معاينة الفاتورة
+  async function handlePreviewReceipt() {
+    await handleSave();
+    // إذا لم يكن هناك خطأ في الحفظ، نقوم بفتح المعاينة
+    if (!setSetting.isError) {
+      try {
+        await previewReceiptMutation.mutate(undefined as never);
+      } catch (err) {
+        // الخطأ يتم التقاطه بواسطة onError في الـ hook
+      }
+    }
+  }
+
+
 
   async function handleUpdateCredentials() {
     if (newPassword && newPassword !== confirmPassword) {
@@ -141,6 +188,103 @@ export function SettingsScreen() {
               />
             </div>
           </label>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }} 
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="yc-card"
+        >
+          <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-4">{t("settings.receipt_customization")}</h3>
+          
+          <div className="space-y-4">
+            <label className="block">
+              <span className="text-[var(--text-primary)] text-sm mb-1.5 block">{t("settings.receipt_width")}</span>
+              <div className="inline-flex w-full p-1 bg-[var(--color-gray-100)] rounded-lg">
+                {(["80mm", "58mm"] as const).map((width) => (
+                  <button
+                    key={width}
+                    type="button"
+                    onClick={() => setReceiptWidth(width)}
+                    className={`relative w-full py-2 text-sm font-medium rounded-md transition-colors ${
+                      receiptWidth === width ? "text-[var(--color-primary-700)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {receiptWidth === width && (
+                      <motion.div
+                        layoutId="receiptWidthIndicator"
+                        className="absolute inset-0 bg-white rounded-md shadow-sm"
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10">{width}</span>
+                  </button>
+                ))}
+              </div>
+            </label>
+
+            <label className="block">
+              <span className="text-[var(--text-primary)] text-sm mb-1.5 block">{t("settings.store_name")}</span>
+              <input
+                className="yc-input"
+                value={receiptStoreName}
+                onChange={(e) => setReceiptStoreName(e.target.value)}
+                placeholder="YasCode Store"
+                data-barcode-ignore="true"
+              />
+            </label>
+
+            <div className="grid grid-cols-2 gap-4">
+              <label className="block">
+                <span className="text-[var(--text-primary)] text-sm mb-1.5 block">{t("settings.phone")}</span>
+                <input
+                  className="yc-input"
+                  value={receiptPhone}
+                  onChange={(e) => setReceiptPhone(e.target.value)}
+                  placeholder="0500000000"
+                  data-barcode-ignore="true"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-[var(--text-primary)] text-sm mb-1.5 block">{t("settings.address")}</span>
+                <input
+                  className="yc-input"
+                  value={receiptAddress}
+                  onChange={(e) => setReceiptAddress(e.target.value)}
+                  placeholder="الحي، المدينة"
+                  data-barcode-ignore="true"
+                />
+              </label>
+            </div>
+
+            <label className="block">
+              <span className="text-[var(--text-primary)] text-sm mb-1.5 block">{t("settings.footer_message")}</span>
+              <textarea
+                className="yc-input min-h-[60px] resize-none"
+                value={receiptFooter}
+                onChange={(e) => setReceiptFooter(e.target.value)}
+                placeholder="شكراً لزيارتكم"
+                data-barcode-ignore="true"
+              />
+            </label>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={handlePreviewReceipt}
+                disabled={previewReceiptMutation.isLoading || setSetting.isLoading}
+                className="yc-btn-secondary py-2 px-4 text-sm"
+              >
+                {previewReceiptMutation.isLoading ? (
+                  <div className="animate-spin h-4 w-4 border-2 border-[var(--color-primary-600)] border-t-transparent rounded-full"></div>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                )}
+                <span>{t("settings.preview_receipt")}</span>
+              </button>
+            </div>
+          </div>
         </motion.div>
 
         <motion.div 

@@ -241,6 +241,7 @@ export function InventoryScreen() {
                 productId={selectedProduct.id}
                 productName={selectedProduct.name}
                 currentQuantity={selectedProduct.currentQuantity}
+                expiryDate={selectedProduct.expiryDate} // ⭐ تم إضافة هذا السطر
                 onDone={refetchAll}
                 onClose={() => setSelectedProduct(null)}
               />

@@ -16,6 +16,8 @@ import { SearchBar } from "./SearchBar";
 import { QuickProducts } from "./QuickProducts";
 import { CartPanel } from "./CartPanel";
 import { PaymentPanel } from "./PaymentPanel";
+import { TotalSummary } from "./TotalSummary"; // ⭐ تم إضافة استيراد المكون الجديد
+
 import { LastSaleItemsTable } from "./LastSaleItemsTable";
 import { EditSaleForm, type EditableSaleItem } from "./EditSaleForm";
 import { ReturnForm } from "./ReturnForm";
@@ -565,35 +567,35 @@ export function SaleScreen() {
                   </button>
 
                   {isOwner && (
-                    <>
-                      <button
-                        onClick={() => openAction(sale, "edit")}
-                        className="flex items-center gap-1.5 rounded-xl border border-[var(--color-primary-200)] bg-gradient-to-r from-[var(--color-primary-50)] to-white px-3 py-2 text-xs font-bold text-[var(--color-primary-700)] shadow-sm transition-all hover:shadow-md"
-                      >
-                        <Pencil className="h-4 w-4" strokeWidth={2} />
-                        {t("saleScreen.edit")}
-                      </button>
+  <>
+    <button
+      onClick={() => openAction(sale, "edit")}
+      className="flex items-center gap-1.5 rounded-xl border border-[var(--color-primary-200)] bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--bg-card)] px-3 py-2 text-xs font-bold text-[var(--color-primary-700)] shadow-sm transition-all hover:shadow-md dark:text-[var(--color-primary-500)]"
+    >
+      <Pencil className="h-4 w-4" strokeWidth={2} />
+      {t("saleScreen.edit")}
+    </button>
 
-                      <button
-                        onClick={() => openAction(sale, "return")}
-                        className="flex items-center gap-1.5 rounded-xl border border-[var(--color-warning-200)] bg-gradient-to-r from-[var(--color-warning-50)] to-white px-3 py-2 text-xs font-bold text-[var(--color-warning-700)] shadow-sm transition-all hover:shadow-md"
-                      >
-                        <RotateCcw className="h-4 w-4" strokeWidth={2} />
-                        {t("saleScreen.return")}
-                      </button>
+    <button
+      onClick={() => openAction(sale, "return")}
+      className="flex items-center gap-1.5 rounded-xl border border-[var(--color-warning-100)] bg-gradient-to-r from-[var(--color-warning-50)] to-[var(--bg-card)] px-3 py-2 text-xs font-bold text-[var(--color-warning-600)] shadow-sm transition-all hover:shadow-md dark:text-[var(--color-warning-500)]"
+    >
+      <RotateCcw className="h-4 w-4" strokeWidth={2} />
+      {t("saleScreen.return")}
+    </button>
 
-                      <button
-                        onClick={() => {
-                          setCancelReason(t("editSale.noReason"));
-                          openAction(sale, "cancel");
-                        }}
-                        className="flex items-center gap-1.5 rounded-xl border border-[var(--color-danger-200)] bg-gradient-to-r from-[var(--color-danger-50)] to-white px-3 py-2 text-xs font-bold text-[var(--color-danger-700)] shadow-sm transition-all hover:shadow-md"
-                      >
-                        <X className="h-4 w-4" strokeWidth={2} />
-                        {t("pos.cancel")}
-                      </button>
-                    </>
-                  )}
+    <button
+      onClick={() => {
+        setCancelReason(t("editSale.noReason"));
+        openAction(sale, "cancel");
+      }}
+      className="flex items-center gap-1.5 rounded-xl border border-[var(--color-danger-100)] bg-gradient-to-r from-[var(--color-danger-50)] to-[var(--bg-card)] px-3 py-2 text-xs font-bold text-[var(--color-danger-700)] shadow-sm transition-all hover:shadow-md dark:text-[var(--color-danger-500)]"
+    >
+      <X className="h-4 w-4" strokeWidth={2} />
+      {t("pos.cancel")}
+    </button>
+  </>
+)}
                 </div>
               </div>
 
@@ -616,20 +618,21 @@ export function SaleScreen() {
           />
         </div>
 
-        <div className="flex flex-shrink-0 items-center gap-3 rounded-2xl border border-[var(--border-light)] bg-[var(--bg-card)] p-3 shadow-[var(--shadow-sm)]">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-medium text-[var(--text-muted)]">
-              {t("saleScreen.requiredTotal")}
-            </span>
-            <span className="text-2xl font-black tabular-nums text-[var(--color-primary-700)]">
-              {totalValue.toFixed(2)} {t("paymentPanel.currency")}
-            </span>
-          </div>
+        {/* ⭐ قسم المجموع المطلوب وزر الدفع - تم تحديثه ليكون أوضح وأكبر */}
+        <div className="flex flex-shrink-0 flex-col gap-3">
+          
+          {/* المكون الجديد لإظهار المجموع بوضوح */}
+          <TotalSummary
+            total={totalValue}
+            currency={t("paymentPanel.currency")}
+            label={t("saleScreen.requiredTotal")}
+          />
+
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => setIsPaymentModalOpen(true)}
             disabled={cart.items.length === 0 || !openSessionId}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-base font-bold text-white shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-lg font-bold text-white shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-50"
             style={{
               background:
                 cart.items.length === 0 || !openSessionId
@@ -637,7 +640,7 @@ export function SaleScreen() {
                   : "linear-gradient(135deg, var(--color-success-500), var(--color-success-600))",
             }}
           >
-            <Wallet className="h-5 w-5" strokeWidth={2.5} />
+            <Wallet className="h-6 w-6" strokeWidth={2.5} />
             {openSessionId
               ? t("saleScreen.completePayment")
               : t("saleScreen.openRegister")}
@@ -783,7 +786,7 @@ export function SaleScreen() {
             : t("saleScreen.cancelInvoice")
         }
         icon={Receipt}
-        accent="danger"
+        accent="danger" 
       >
         {selectedSale && (
           <div className="space-y-3">

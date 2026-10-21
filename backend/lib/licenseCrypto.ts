@@ -1,7 +1,9 @@
-// backend/lib/licenseCrypto.ts
+// lib/licenseCrypto.ts
 //
-// يذهب هنا بجانب auth.ts, db.ts, backup.ts — أداة تشفير خام بدون أي منطق أعمال أو DB.
-// مستوردة من licensing.controller.ts (verifyLicense) ومن أداة التوليد الداخلية خارج هذا الـ repo (signLicense).
+// نفس منطق التحقق الموجود عندك في backend/lib/licenseCrypto.ts بمشروع الـ POS.
+// السيرفر يحتاج يتحقق من التوقيع أيضًا (وليس فقط الجهاز)، وإلا أي شخص يقدر يبعث
+// طلب activate مزيّف بـ clientId عشوائي بدون امتلاك مفتاح حقيقي، ويحجز الـ clientId
+// قبل الزبون الحقيقي (هجوم بسيط جدًا لو ما تحقّقناش من التوقيع هنا أيضًا).
 
 import crypto from "node:crypto";
 
@@ -21,7 +23,6 @@ export type VerifyResult =
   | { valid: true; payload: LicensePayload }
   | { valid: false; reason: "MALFORMED" | "BAD_SIGNATURE" };
 
-/** يتحقق من صحة مفتاح الترخيص بالمفتاح العام — هذا فقط ما يُستخدم داخل التطبيق الموزَّع */
 export function verifyLicense(licenseKey: string, publicKeyPem: string): VerifyResult {
   let signed: SignedLicense;
   try {
@@ -42,7 +43,3 @@ export function verifyLicense(licenseKey: string, publicKeyPem: string): VerifyR
     return { valid: false, reason: "BAD_SIGNATURE" };
   }
 }
-
-// ملاحظة: دالتا generateKeyPair() و signLicense() عمدًا غير موجودتين هنا.
-// هما موجودتان فقط في أداة التوليد الداخلية (خارج هذا الـ repo) لأن أي كود توقيع
-// لا يجب أبدًا أن يكون جزءًا من التطبيق الموزَّع على أجهزة الزبائن.

@@ -1,6 +1,6 @@
 
 ```
-YasCode-Supperette-Project
+yasStore
 ├─ backend
 │  ├─ back-end.md
 │  ├─ lib
@@ -9,6 +9,7 @@ YasCode-Supperette-Project
 │  │  ├─ backup.ts
 │  │  ├─ barcodeGenerator.ts
 │  │  ├─ db.ts
+│  │  ├─ deviceId.ts
 │  │  ├─ env.ts
 │  │  ├─ licenseCrypto.ts
 │  │  ├─ logger.ts
@@ -108,15 +109,15 @@ YasCode-Supperette-Project
 │  └─ package.json
 ├─ drizzle
 │  └─ migrations
-│     ├─ 0000_workable_lady_vermin.sql
-│     ├─ 0001_woozy_network.sql
 │     └─ meta
-│        ├─ 0000_snapshot.json
-│        ├─ 0001_snapshot.json
 │        └─ _journal.json
 ├─ drizzle.config.ts
 ├─ e2e
 │  └─ login.spec.ts
+├─ extracted
+│  └─ package.json
+├─ extracted2
+│  └─ package.json
 ├─ frontend
 │  ├─ electron
 │  │  ├─ main.ts
@@ -155,7 +156,8 @@ YasCode-Supperette-Project
 │     │  │  ├─ QuickProducts.tsx
 │     │  │  ├─ ReturnForm.tsx
 │     │  │  ├─ SaleScreen.tsx
-│     │  │  └─ SearchBar.tsx
+│     │  │  ├─ SearchBar.tsx
+│     │  │  └─ TotalSummary.tsx
 │     │  ├─ products
 │     │  │  ├─ ProductForm.tsx
 │     │  │  └─ ProductsScreen.tsx
@@ -207,7 +209,17 @@ YasCode-Supperette-Project
 ├─ logs
 ├─ package-lock.json
 ├─ package.json
+├─ pics-from-project
+│  ├─ Capture d'écran 2026-09-29 123539.png
+│  ├─ Capture d'écran 2026-09-29 123900.png
+│  ├─ Capture d'écran 2026-09-29 125810.png
+│  ├─ Capture d'écran 2026-09-29 125909.png
+│  ├─ Capture d'écran 2026-09-29 130006.png
+│  ├─ Capture d'écran 2026-09-29 130050.png
+│  ├─ Capture d'écran 2026-09-29 135535.png
+│  └─ Capture d'écran 2026-09-29 135655.png
 ├─ playwright.config.ts
+├─ pos.db
 ├─ postcss.config.js
 ├─ ProjectAnalysis.md
 ├─ public
@@ -219,8 +231,11 @@ YasCode-Supperette-Project
 ├─ RUNNING.md
 ├─ schemaDB.md
 ├─ scripts
+│  ├─ migrate.ts
 │  ├─ seed-all.ts
-│  └─ seed-owner.ts
+│  ├─ seed-owner.ts
+│  └─ seed-reports.ts
+├─ store.db
 ├─ tailwind.config.js
 ├─ tsconfig.electron.json
 ├─ tsconfig.json

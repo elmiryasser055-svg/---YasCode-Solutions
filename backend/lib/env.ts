@@ -23,6 +23,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("production"),
   // عدد أيام "قرب انتهاء الصلاحية" الافتراضي (قابل للتعديل من app_settings لاحقًا)
   DEFAULT_EXPIRY_WARNING_DAYS: z.coerce.number().int().positive().default(30),
+
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -47,6 +48,7 @@ export function loadEnv(overrides: Partial<Record<keyof Env, string>> = {}): Env
     NODE_ENV: overrides.NODE_ENV ?? process.env.NODE_ENV,
     DEFAULT_EXPIRY_WARNING_DAYS:
       overrides.DEFAULT_EXPIRY_WARNING_DAYS ?? process.env.DEFAULT_EXPIRY_WARNING_DAYS,
+ 
   });
 
   if (!result.success) {
@@ -70,3 +72,6 @@ export function getEnv(): Env {
 export function resetEnvForTests() {
   cachedEnv = null;
 }
+
+
+

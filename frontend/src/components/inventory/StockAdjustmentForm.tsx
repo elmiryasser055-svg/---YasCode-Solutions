@@ -9,24 +9,33 @@ interface Props {
   productId: number;
   productName: string;
   currentQuantity: number;
+  expiryDate: string | null; // ⭐ تمت إضافة هذا الـ prop
   onDone: () => void;
   onClose: () => void;
 }
 
 const QUICK_AMOUNTS = [1, 5, 10, 50];
 
-export function StockAdjustmentForm({ productId, productName, currentQuantity, onDone, onClose }: Props) {
+export function StockAdjustmentForm({ productId, productName, currentQuantity, expiryDate, onDone, onClose }: Props) {
   const { t } = useTranslation();
   
+  // حالات تعديل المخزون
   const [mode, setMode] = useState<"difference" | "exact">("difference");
   const [direction, setDirection] = useState<"in" | "out">("in");
   const [amount, setAmount] = useState<number>(0);
   const [reason, setReason] = useState(t("stockAdjustment.noReason"));
 
-  const mutationFn = mode === "difference" ? api().inventory.adjustStock : api().inventory.correctInventory;
-  
-  const adjustStock = useIpcMutation(mutationFn as any, {
-    onSuccess: onDone,
+  // ⭐ حالات تعديل تاريخ الصلاحية
+  const [newExpiryDate, setNewExpiryDate] = useState<string>(expiryDate ? expiryDate.split("T")[0] : "");
+
+  const adjustStock = useIpcMutation(
+    (mode === "difference" ? api().inventory.adjustStock : api().inventory.correctInventory) as any, 
+    { onSuccess: onDone }
+  );
+
+  // ⭐ mutation خاص بتحديث بيانات المنتج (التاريخ)
+  const updateExpiry = useIpcMutation(api().products.update as any, {
+    onSuccess: onDone, // إعادة جلب البيانات وتحديث الجدول
   });
 
   async function handleSubmit(e: React.FormEvent) {
@@ -41,6 +50,15 @@ export function StockAdjustmentForm({ productId, productName, currentQuantity, o
     }
 
     await adjustStock.mutate(payload);
+  }
+
+  // ⭐ دالة حفظ التاريخ فقط
+  async function handleExpiryUpdate(e: React.FormEvent) {
+    e.preventDefault();
+    await updateExpiry.mutate({
+      id: productId,
+      expiryDate: newExpiryDate || null, // إرسال null إذا كان فارغاً
+    });
   }
 
   const handleQuickAmount = (val: number) => {
@@ -64,6 +82,40 @@ export function StockAdjustmentForm({ productId, productName, currentQuantity, o
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
       </div>
+
+      {/* ⭐ قسم تعديل تاريخ الصلاحية */}
+      <form onSubmit={handleExpiryUpdate} className="mb-4 p-3 bg-[var(--color-gray-50)] rounded-lg border border-[var(--border-light)]">
+        <label className="block text-sm">
+          <span className="text-[var(--text-secondary)] mb-1 block font-medium">
+            {t("stockAdjustment.expiryDate")}
+          </span>
+          <div className="flex gap-2">
+            <input
+              type="date"
+              className="yc-input flex-1"
+              value={newExpiryDate}
+              onChange={(e) => setNewExpiryDate(e.target.value)}
+              data-barcode-ignore="true"
+            />
+            <button
+              type="submit"
+              disabled={updateExpiry.isLoading}
+              className="yc-btn-secondary !py-2 !px-3 whitespace-nowrap disabled:opacity-50"
+            >
+              {updateExpiry.isLoading ? (
+                <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div>
+              ) : (
+                t("common.save")
+              )}
+            </button>
+          </div>
+          {updateExpiry.error && (
+            <p className="text-xs text-[var(--color-danger-600)] mt-1">{updateExpiry.error}</p>
+          )}
+        </label>
+      </form>
+
+      <div className="border-t border-[var(--border-light)] mb-4"></div>
 
       {/* Toggle Mode */}
       <div className="grid grid-cols-2 gap-2 bg-[var(--color-gray-100)] p-1 rounded-lg mb-4">

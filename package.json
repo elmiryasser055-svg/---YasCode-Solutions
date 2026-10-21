@@ -32,10 +32,13 @@
     "bwip-js": "^4.5.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.33.0",
+    "electron-printer": "^0.0.5",
     "framer-motion": "^13.2.0",
     "i18next": "^23.14.0",
     "lucide-react": "^1.39.0",
+    "node-machine-id": "^1.1.12",
     "node-thermal-printer": "^4.4.4",
+    "printer": "^0.4.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-grid-layout": "^2.2.4",
@@ -95,9 +98,7 @@
       "output": "dist-installer"
     },
     "win": {
-      "target": [
-        "nsis"
-      ],
+      "target": "nsis",
       "icon": "build/icon.ico"
     },
     "nsis": {

@@ -1,18 +1,29 @@
 // backend/modules/licensing/licensing.controller.ts
 //
-// منطق العمل (مثل auth.controller.ts) — يستدعي licenseCrypto من lib/ ويستخدم licensing.service
-// للقراءة/الكتابة. هذا هو الملف الذي تستدعيه ipc.ts وأيضًا أي موديول آخر يحتاج assertLicenseActive
-// (مثلاً sales.controller.ts قبل إتمام أي عملية بيع).
+// إصلاحان عن النسخة السابقة:
+//   1) LICENSE_SERVER_URL كان يشير للجذر فقط بدون /api/license/activate،
+//      فكان يضرب صفحة الـ Next.js الرئيسية (GET فقط) بدل الـ API route،
+//      يرجع 405 كصفحة HTML، فيفشل res.json() ويظهر خطأ "يحتاج اتصال بالإنترنت"
+//      حتى لو السيرفر شغّال فعليًا.
+//   2) isDev كانت تقارن NODE_ENV بـ "dev"، لكن سكريبت التشغيل يضبطه على
+//      "development" (راجع package.json: cross-env NODE_ENV=development) —
+//      فكانت المقارنة تفشل دائمًا وتستخدم رابط الإنتاج حتى في وضع التطوير.
 
 import { verifyLicense } from "../../lib/licenseCrypto";
 import { getCurrentLicense, replaceLicense, touchLastSeen } from "./licensing.service";
+import { getDeviceId } from "../../lib/deviceId";
 import type { ActivateLicenseInput } from "./licensing.schema";
 
-// ⚠️ استبدل هذا بمحتوى public.pem الناتج عن أداة التوليد الداخلية (خارج هذا الـ repo)
 const PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEARpZm+Xo/Ca9Hqc/HEpy1U3q6HtxS1SiiuQRg/wRkV+k=
------END PUBLIC KEY-----
-`;
+-----END PUBLIC KEY-----`;
+
+const isDev = process.env.NODE_ENV === "development";
+
+// ⚠️ لازم يشير مباشرة لـ API route، مو للجذر
+const LICENSE_SERVER_URL = 
+   "https://yascode-license-server.vercel.app/api/license/activate"
+  ;
 
 const CLOCK_TOLERANCE_MS = 5 * 60 * 1000;
 
@@ -22,9 +33,11 @@ export type LicenseStatus =
   | { state: "EXPIRED"; clientName: string; expiresAt: string }
   | { state: "TAMPERED" };
 
-export function activateLicense(input: ActivateLicenseInput): { ok: true } | { ok: false; error: string } {
+export async function activateLicense(
+  input: ActivateLicenseInput
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  // 1) تحقق محلي من التوقيع أولاً (سريع، ما يحتاج إنترنت)
   const result = verifyLicense(input.licenseKey, PUBLIC_KEY_PEM);
-
   if (!result.valid) {
     return {
       ok: false,
@@ -37,6 +50,31 @@ export function activateLicense(input: ActivateLicenseInput): { ok: true } | { o
     return { ok: false, error: "هذا المفتاح منتهي الصلاحية أصلاً" };
   }
 
+  // 2) تحقق من السيرفر — هنا فقط نحتاج إنترنت، ومرة واحدة فقط عند التفعيل
+  const deviceId = getDeviceId();
+  let serverResponse: { ok: boolean; error?: string };
+  try {
+    const res = await fetch(LICENSE_SERVER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ licenseKey: input.licenseKey, deviceId }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    serverResponse = await res.json();
+    console.log("Server response:", serverResponse);
+  } catch (err) {
+    console.error("License server request failed:", err);
+    return {
+      ok: false,
+      error: "يحتاج التفعيل اتصالاً بالإنترنت. تأكد من اتصالك وأعد المحاولة (الاستخدام اليومي بعدها يبقى offline بالكامل).",
+    };
+  }
+
+  if (!serverResponse.ok) {
+    return { ok: false, error: serverResponse.error ?? "تعذّر التحقق من الترخيص عبر السيرفر" };
+  }
+
+  // 3) بعد موافقة السيرفر، نثبّت الترخيص محليًا كالمعتاد
   replaceLicense({
     licenseKey: input.licenseKey,
     clientId: result.payload.clientId,
@@ -57,7 +95,6 @@ export function checkLicenseStatus(): LicenseStatus {
   const nowMs = now.getTime();
   const lastSeenMs = new Date(row.lastSeenAt).getTime();
 
-  // حماية من تراجع ساعة النظام (محاولة تفادي انتهاء الاشتراك)
   if (nowMs < lastSeenMs - CLOCK_TOLERANCE_MS) {
     return { state: "TAMPERED" };
   }
@@ -73,10 +110,6 @@ export function checkLicenseStatus(): LicenseStatus {
   return { state: "ACTIVE", clientName: row.clientName, expiresAt: row.expiresAt, daysLeft };
 }
 
-/**
- * يُستدعى من موديولات أخرى (خصوصًا sales.controller.ts) قبل أي عملية حساسة،
- * لمنع الالتفاف على القفل عبر ترك التطبيق مفتوحًا من قبل انتهاء الترخيص.
- */
 export function assertLicenseActive(): void {
   const status = checkLicenseStatus();
   if (status.state !== "ACTIVE") {

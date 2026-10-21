@@ -1,18 +1,10 @@
 // modules/printing/printing.service.ts
-//
-// ⭐ هذا الملف يسدّ فجوة كانت موجودة: lib/printer.ts وlib/barcodeGenerator.ts
-// (المرحلة 3) كانا موجودين كطبقة تجريد فقط، بلا أي service/ipc يستدعيهما فعليًا.
-//
-// قرار تصميم مهم: الطباعة **منفصلة تمامًا** عن transaction البيع في sales.service.ts.
-// لو فشلت الطباعة (طابعة غير متصلة، ورق نافد...) يجب ألا تُلغى عملية البيع التي
-// نجحت فعليًا في قاعدة البيانات — البيع حدث بالفعل، والطباعة مجرد إخراج ورقي
-// يمكن إعادة محاولته أو تجاوزه دون التأثير على سلامة البيانات المالية.
-
 import { eq } from "drizzle-orm";
 import { getDb } from "../../lib/db";
 import { sales, products, users } from "../../../db/schema";
 import {
   printSaleTicket as printTicketRaw,
+  previewSaleTicket as previewTicketRaw,
   printBarcodeLabel as printLabelRaw,
   configurePrinter,
 } from "../../lib/printer";
@@ -20,14 +12,19 @@ import { assignGeneratedBarcode, generateBarcodeImage } from "../../lib/barcodeG
 import { getSetting } from "../settings/settings.service";
 import { NotFoundError } from "../../middleware/errors";
 
-/**
- * ⭐ يسدّ فجوة: يقرأ اسم الطابعة المضبوط فعليًا من app_settings (شاشة
- * الإعدادات) قبل كل عملية طباعة، ويهيّئ lib/printer.ts به. من قبل كان
- * الإعداد يُحفظ في القاعدة بلا أي تأثير فعلي على أي طباعة.
- */
 async function ensurePrinterConfigured() {
   const printerName = await getSetting("printerName");
   configurePrinter(printerName);
+}
+
+async function getReceiptSettings() {
+  return {
+    storeName: await getSetting("receipt_store_name"),
+    phone: await getSetting("receipt_phone"),
+    address: await getSetting("receipt_address"),
+    footerMessage: await getSetting("receipt_footer"),
+    paperWidth: ((await getSetting("receipt_width")) as "80mm" | "58mm") || "80mm",
+  };
 }
 
 export async function printSaleTicket(saleId: number) {
@@ -41,6 +38,7 @@ export async function printSaleTicket(saleId: number) {
   if (!sale) throw new NotFoundError("عملية البيع غير موجودة.");
 
   const cashier = await db.query.users.findFirst({ where: eq(users.id, sale.cashierId) });
+  const settings = await getReceiptSettings();
 
   await printTicketRaw({
     saleNumber: sale.saleNumber,
@@ -55,16 +53,65 @@ export async function printSaleTicket(saleId: number) {
     discount: sale.discount,
     total: sale.total,
     createdAt: sale.createdAt,
+    settings,
   });
 
   return { success: true };
 }
 
-/**
- * طباعة ملصق باركود لمنتج. إن لم يملك المنتج باركودًا بعد، يُولَّد له واحد
- * تلقائيًا أولاً (عبر lib/barcodeGenerator.ts) ثم يُطبع مباشرة — بدل اضطرار
- * المستخدم لاستدعاء عمليتين منفصلتين يدويًا.
- */
+export async function previewSaleTicket(saleId: number) {
+  const db = getDb();
+  const sale = await db.query.sales.findFirst({
+    where: eq(sales.id, saleId),
+    with: { items: true },
+  });
+  if (!sale) throw new NotFoundError("عملية البيع غير موجودة.");
+
+  const cashier = await db.query.users.findFirst({ where: eq(users.id, sale.cashierId) });
+  const settings = await getReceiptSettings();
+
+  await previewTicketRaw({
+    saleNumber: sale.saleNumber,
+    cashierName: cashier?.fullName ?? "-",
+    items: sale.items.map((item) => ({
+      name: item.productNameSnapshot,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      lineTotal: item.lineTotal,
+    })),
+    subtotal: sale.subtotal,
+    discount: sale.discount,
+    total: sale.total,
+    createdAt: sale.createdAt,
+    settings,
+  });
+
+  return { success: true };
+}
+
+// ⭐ دالة معاينة القالب فقط (ببيانات وهمية) لشاشة الإعدادات
+export async function previewReceiptTemplate() {
+  const settings = await getReceiptSettings();
+
+  const dummyData = {
+    saleNumber: "PREVIEW-1234",
+    cashierName: "اسم الكاشير",
+    items: [
+      { name: "منتج تجريبي 1", quantity: 2, unitPrice: 15.5, lineTotal: 31.0 },
+      { name: "منتج تجريبي 2", quantity: 1, unitPrice: 40.0, lineTotal: 40.0 },
+      { name: "منتج بالوزن (كغ)", quantity: 1.5, unitPrice: 10.0, lineTotal: 15.0 },
+    ],
+    subtotal: 86.0,
+    discount: 6.0,
+    total: 80.0,
+    createdAt: new Date().toISOString(),
+    settings,
+  };
+
+  await previewTicketRaw(dummyData);
+  return { success: true };
+}
+
 export async function printBarcodeLabel(productId: number, copies: number) {
   await ensurePrinterConfigured();
 
@@ -89,3 +136,4 @@ export async function printBarcodeLabel(productId: number, copies: number) {
 
   return { barcode, copiesPrinted: copies };
 }
+

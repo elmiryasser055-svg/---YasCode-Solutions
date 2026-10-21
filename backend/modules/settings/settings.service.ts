@@ -14,6 +14,12 @@ export const SETTINGS_DEFAULTS: Record<string, string> = {
   language: "ar",
   printerName: "",
   expiryWarningDays: "30",
+  // ⭐ إعدادات الفاتورة الجديدة
+  receipt_store_name: "YasCode Store",
+  receipt_phone: "0500000000",
+  receipt_address: "",
+  receipt_footer: "شكراً لزيارتكم",
+  receipt_width: "80mm", // يمكن أن تكون "80mm" أو "58mm"
 };
 
 export async function getSetting(key: string): Promise<string> {

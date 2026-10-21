@@ -254,6 +254,9 @@
     "csvNoDate": "بدون"
   },
   "stockAdjustment": {
+    
+     "expiryDate": "تاريخ انتهاء الصلاحية",
+  
     "noReason": "لم يتم تحديد سبب",
     "currentRecordedQty": "الكمية الحالية المسجلة:",
     "modeDifference": "تعديل بالفرق (دخول/خروج)",
@@ -393,6 +396,13 @@
     "empty_dead_stock": "رائع! لا يوجد مخزون راكد."
   },
   "settings": {
+    "receipt_customization": "تخصيص الفاتورة",
+    "receipt_width": "عرض الورق",
+    "store_name": "اسم المحل",
+    "phone": "الهاتف",
+    "address": "العنوان",
+    "footer_message": "رسالة التذييل (الأسفل)",
+    "preview_receipt": "معاينة الفاتورة",
     "saveSuccess": "تم حفظ الإعدادات بنجاح",
     "updateCredsSuccess": "تم تحديث بيانات الدخول بنجاح",
     "passwordMismatchError": "كلمة المرور الجديدة وتأكيدها غير متطابقين.",

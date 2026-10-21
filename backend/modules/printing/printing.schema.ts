@@ -11,3 +11,4 @@ export const printBarcodeLabelSchema = z.object({
   copies: z.number().int().positive().max(50).default(1),
 });
 export type PrintBarcodeLabelInput = z.infer<typeof printBarcodeLabelSchema>;
+

@@ -199,6 +199,8 @@ export interface AppApi {
       >
     >;
   };
+  
+  // ⭐ تحديث قسم الطباعة
   printing: {
     printSaleTicket: (input: {
       saleId: number;
@@ -207,7 +209,13 @@ export interface AppApi {
       productId: number;
       copies?: number;
     }) => Promise<IpcResult<{ barcode: string; copiesPrinted: number }>>;
+    // ⭐ إضافات المعاينة الجديدة
+    previewSaleTicket: (input: {
+      saleId: number;
+    }) => Promise<IpcResult<{ success: true }>>;
+    previewReceiptTemplate: () => Promise<IpcResult<{ success: true }>>;
   };
+  
   settings: {
     get: (input: { key: string }) => Promise<IpcResult<string>>;
     getAll: () => Promise<IpcResult<Record<string, string>>>;

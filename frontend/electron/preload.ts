@@ -73,6 +73,8 @@ contextBridge.exposeInMainWorld("api", {
   printing: {
     printSaleTicket: (input: unknown) => invoke("printing:printSaleTicket", input),
     printBarcodeLabel: (input: unknown) => invoke("printing:printBarcodeLabel", input),
+    previewSaleTicket: (input: unknown) => invoke("printing:previewSaleTicket", input),
+    previewReceiptTemplate: () => invoke("printing:previewReceiptTemplate"),
   },
   settings: {
     get: (input: unknown) => invoke("settings:get", input),

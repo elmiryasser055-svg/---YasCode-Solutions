@@ -255,6 +255,9 @@
     "csvNoDate": "Sans"
   },
   "stockAdjustment": {
+    
+     "expiryDate": "Date d'expiration",
+  
     "noReason": "Aucune raison spécifiée",
     "currentRecordedQty": "Quantité actuelle enregistrée :",
     "modeDifference": "Ajustement par différence (Entrée/Sortie)",
@@ -418,6 +421,13 @@
     "current_password_placeholder": "Entrez votre mot de passe actuel pour confirmer",
     "update_info": "Mettre à jour les informations",
     "save_changes": "Enregistrer les modifications"
+    ,"receipt_customization": "Personnalisation du ticket",
+    "receipt_width": "Largeur du papier",
+    "store_name": "Nom du magasin",
+    "phone": "Téléphone",
+    "address": "Adresse",
+    "footer_message": "Message de pied de page",
+    "preview_receipt": "Aperçu du ticket"
   },
   "suppliers": {
     "paymentSuccess": "Paiement enregistré avec succès",
